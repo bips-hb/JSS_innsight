@@ -18,7 +18,7 @@ TAB_NAMES_DEC <- c("sex_male", "sex_female", "age",
 ###############################################################################
 
 # Load keras model
-model_path <- paste0('7_Illustration/checkpoints/model_', IMAGE_SHAPE[1], '_', IMAGE_SHAPE[2])
+model_path <- paste0('4_Illustrations/checkpoints/model_', IMAGE_SHAPE[1], '_', IMAGE_SHAPE[2])
 if (dir.exists(model_path)) {
   keras_model <- load_model_tf(model_path)
 } else {

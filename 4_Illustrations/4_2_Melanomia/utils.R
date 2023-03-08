@@ -32,7 +32,7 @@ load_np_arrays <- function(paths) {
 }
 
 get_input <- function(df, index) {
-  df <- encode_categorical(df[index, ], "7_Illustration/data/test/")
+  df <- encode_categorical(df[index, ], "4_Illustrations/data/test/")
   img_data <- load_np_arrays(df$image_name)
   tab_data <- as.matrix(df[, 2:11])
   colnames(tab_data) <- NULL

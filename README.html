@@ -297,23 +297,17 @@ overflow-y: auto;
 border: 1px solid #ddd;
 border-radius: 4px;
 }
-.tabset-dropdown > .nav-tabs > li.active:before {
-content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+content: "\e259";
 font-family: 'Glyphicons Halflings';
 display: inline-block;
 padding: 10px;
 border-right: 1px solid #ddd;
 }
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-content: "";
-border: none;
-}
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-content: "";
+content: "\e258";
 font-family: 'Glyphicons Halflings';
-display: inline-block;
-padding: 10px;
-border-right: 1px solid #ddd;
+border: none;
 }
 .tabset-dropdown > .nav-tabs > li.active {
 display: block;
@@ -358,78 +352,33 @@ display: none;
 </div>
 
 
-<div id="innsight-and-the-melanoma-dataset" class="section level1">
-<h1><code>innsight</code> and the Melanoma Dataset</h1>
-<div id="step-0-train-a-neural-network" class="section level2">
-<h2>Step 0: Train a Neural Network</h2>
-<div id="create-conda-environment" class="section level3">
-<h3>Create Conda environment</h3>
-<p>To avoid screwing things up on the machine, we create a Conda
-environment with the following requirements:</p>
+<div id="interpreting-deep-neural-networks-with-the-package-innsight" class="section level1">
+<h1>Interpreting Deep Neural Networks with the Package
+<code>innsight</code></h1>
+<p>This repository can be used to reproduce the results and figures from
+the paper <em>“Interpreting Deep Neural Networks with the package
+innsight”</em> submitted for the Journal of Statistical Software (JSS).
+It is structured as follows:</p>
 <ul>
-<li>Python==3.8.13</li>
-<li>numpy==1.23.4</li>
-<li>TensorFlow==2.9.3</li>
-<li>Keras==2.9.0</li>
-<li>Cuda==11.2.2 (for GPU usage)</li>
-<li>cudNN==8.1.0 (for GPU usage)</li>
+<li><p>Folder <code>4_Illustration/</code> covers the example with the
+penguin dataset (only numerical input variables) and the melanoma
+dataset (images and tabular inputs).</p></li>
+<li><p>Folder <code>5_Validation/</code> includes the simulation study
+of the implemented feature attribution methods regarding the mean
+absolute error considering the reference implementations
+<strong>Captum</strong>, <strong>Zennit</strong>,
+<strong>iNNvestigate</strong>, and <strong>DeepLift</strong>.</p></li>
+<li><p>The <code>Appendix_B/</code> folder contains the code to
+reproduce the differences between <strong>innsight</strong> and
+<strong>iNNvestigate</strong> explained in Appendix A for the LRP <span class="math inline">\(\alpha\)</span>-<span class="math inline">\(\beta\)</span>-rule when a bias vector occurs in
+the model.</p></li>
 </ul>
-<p>For a correct installation of the environment we refer to the
-official site of <a href="https://www.tensorflow.org/install/pip">TensorFlow</a>.</p>
-</div>
-<div id="train-the-model" class="section level3">
-<h3>Train the model</h3>
-<p>The melanoma dataset consists of over <span class="math inline">\(33.000\)</span> training images, partly in still
-very high resolution. Since these have to be repeatedly loaded into
-memory during training and scaled to a unit size, this is done as a
-preprocessing step before the actual training. Therefore, change the
-following lines in the global attributes section in the file
-<code>step_0_train_model.py</code> file, accordingly:</p>
-<pre class="python"><code>EPOCHS = 400
-BATCH_SIZE = 256
-VAL_SPLIT = 0.1
-IMAGE_SHAPE = (128,128,3)
-DO_PREPROCESSING = False
-
-# Data files and directories
-file_train_csv = &quot;/opt/example-data/siim-isic-melanoma/train.csv&quot;
-file_test_csv = &quot;/opt/example-data/siim-isic-melanoma/test.csv&quot;
-dir_train_images = &quot;/opt/example-data/siim-isic-melanoma/jpeg/train/&quot;
-dir_test_images = &quot;/opt/example-data/siim-isic-melanoma/jpeg/test/&quot;</code></pre>
-<ul>
-<li><code>EPOCHS</code>: This integer value is used to set the number of
-epochs for the training. Furthermore, ‘Adam’ is used as the optimizer
-and the callback ‘EarlyStopping’ ensures that only the model with the
-best validation loss will be saved.</li>
-<li><code>BATCH_SIZE</code>: Make sure that the entire batch of data
-fits into the memory.</li>
-<li><code>VAL_SPLIT</code>: Set the fraction of the training data to be
-used exclusively as validation data. These are then randomly taken from
-all training data.</li>
-<li><code>IMAGE_SHAPE</code>: This triple defines the uniform shape of
-all input images for the model, i.e. each input image must be scaled to
-this size before it can be fed into the model. In the preprocessing step
-all images are loaded, scaled to this shape and stored as a numpy array
-under <code>~/data/train/</code> or <code>~/data/test/</code> with the
-same file name.</li>
-<li><code>DO_PREPROCESSING</code>: This logical value decides whether
-the preprocessing step will be executed again. Once it must be set to
-<code>True</code> for each change of <code>IMAGE_SHAPE</code>, otherwise
-no data exist or they have the wrong shape.</li>
-<li>Subsequently, the paths of the melanoma data set must be specified.
-The path to the respective csv files and the respective paths to the
-directories with the jpeg images for the training and test data are
-required.</li>
-</ul>
-<p>Then, the model can be trained on the melanoma dataset by calling the
-Python file <code>step_0_train_model.py</code> in the created Conda
-environment:</p>
-<pre class="bash"><code>python step_0_train_model.py</code></pre>
-<p>The model with the best validation loss is then saved in the folder
-<code>~/checkpoints/</code> folder under the name
-<code>model_{IMAGE_SHAPE[0]}_[IMAGE_SHAPE[1]}</code>.</p>
-</div>
-</div>
+<p>Since each reference implementation has different constraints on the
+provided deep learning library and the available packages, the
+computations occur in separated conda environments with the required
+packages and package versions. These conda environments can be created
+using the R script <code>utils/preprocess/create_condaenvs.R</code> and
+are essential for reproducing the results.</p>
 </div>
 
 

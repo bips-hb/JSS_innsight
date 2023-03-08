@@ -31,8 +31,8 @@ accordingly:
 EPOCHS = 400
 BATCH_SIZE = 256
 VAL_SPLIT = 0.1
-IMAGE_SHAPE = (128,128,3)
-DO_PREPROCESSING = False
+IMAGE_SHAPE = (224,224,3)
+DO_PREPROCESSING = True
 
 # Data files and directories
 file_train_csv = "/opt/example-data/siim-isic-melanoma/train.csv"

@@ -90,7 +90,7 @@ output <- input %>%
   layer_dense(1, use_bias = TRUE, weights = list(array(1, dim = c(1, 1)), array(-0.25)))
 model <- keras_model(input, output)
 
-model_path <- "Problems/model_LRP_with_bias.h5"
+model_path <- "Appendix_B/model_LRP_with_bias.h5"
 model$save(model_path)
 
 input <- array(1, dim = c(1, 1))
