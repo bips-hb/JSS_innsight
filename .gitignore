@@ -1,0 +1,12 @@
+.Rproj.user
+.Rhistory
+*.RData
+.Ruserdata
+*.npy
+*__pycache__
+*checkpoints
+*.rds
+*.h5
+*.pt
+*.png
+*.pdf
