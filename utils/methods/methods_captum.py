@@ -9,6 +9,8 @@ def apply_Gradient(model, inputs, func_args = None, num_outputs = int(1)):
   import numpy as np
   import time
   from captum.attr import Saliency, InputXGradient
+  
+  torch.set_num_threads(int(1))
 
   if func_args["times_input"]:
     method = InputXGradient
@@ -52,6 +54,8 @@ def apply_SmoothGrad(model, inputs, func_args = None, num_outputs = int(1)):
   import numpy as np
   import time
   from captum.attr import Saliency, NoiseTunnel, InputXGradient
+  
+  torch.set_num_threads(int(1))
   
   # calc stdevs
   std = float((np.max(inputs) - np.min(inputs)) * func_args['noise_level'])
@@ -99,6 +103,8 @@ def apply_LRP(model, inputs, func_args = None, num_outputs = int(1)):
   import time
   from captum.attr import LRP
   from captum.attr._utils.lrp_rules import EpsilonRule, Alpha1_Beta0_Rule
+  
+  torch.set_num_threads(int(1))
   
   class Pass(EpsilonRule):
     """
@@ -172,6 +178,8 @@ def apply_DeepLift(model, inputs, func_args = None, num_outputs = int(1)):
   import numpy as np
   import time
   from captum.attr import DeepLift  
+  
+  torch.set_num_threads(int(1))
   
   start_time = time.time()
   inputs = torch.tensor(inputs, dtype = torch.float)

@@ -5,15 +5,16 @@
 #
 ################################################################################
 
+
 #---------------------- Configuration and pre-processing -----------------------
 
 # Define attributes
-num_models <- 100
-num_outputs <- c(1, 5)
+num_models <- 1
+num_outputs <- c(1) #, 5)
 src_dir <- "5_Validation"
 generate_models <- TRUE
 run_benchmark <- TRUE
-batch_size <- 50
+batch_size <- 5
 show <- TRUE # only for debugging
 
 # Define experiment configs
@@ -76,6 +77,7 @@ if (run_benchmark) {
 }
 
 # ------------------------------- Create plots ---------------------------------
+cli::cli_h2("Creating Plots")
 library(ggplot2)
 library(scales)
 library(ggsci)

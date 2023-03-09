@@ -18,6 +18,10 @@ def apply_Gradient(model_path, inputs, func_args = None, num_outputs = int(1)):
   
   tf.compat.v1.disable_eager_execution()
   keras.backend.clear_session()
+  config = tf.ConfigProto(intra_op_parallelism_threads = int(1),
+                          inter_op_parallelism_threads = int(1))
+  session = tf.Session(config=config)
+  tf.keras.backend.set_session(session)
   
   start_time = time.time()
   # Load model
@@ -34,7 +38,6 @@ def apply_Gradient(model_path, inputs, func_args = None, num_outputs = int(1)):
   convert_time = time.time() - start_time
   input_time = time.time()
 
-  print("method started")
   result = list()
   for i in range(int(num_outputs)):
     res = np.array(score_func(
@@ -44,7 +47,6 @@ def apply_Gradient(model_path, inputs, func_args = None, num_outputs = int(1)):
                   progress_update = None))
     result.append(res)
   end_time = time.time()
-  print("method done")
 
   summary = {
     "total_time": end_time - start_time,
@@ -63,6 +65,7 @@ def apply_DeepLift(model_path, inputs, func_args = None, num_outputs = int(1)):
   # Load required packages
   import keras
   from keras import backend as K
+  import tensorflow as tf
   import numpy as np
   import time
   import os
@@ -72,7 +75,12 @@ def apply_DeepLift(model_path, inputs, func_args = None, num_outputs = int(1)):
   from deeplift.layers import NonlinearMxtsMode
   from deeplift.conversion import kerasapi_conversion as kc
   
+  tf.compat.v1.disable_eager_execution()
   keras.backend.clear_session()
+  config = tf.ConfigProto(intra_op_parallelism_threads = int(1),
+                          inter_op_parallelism_threads = int(1))
+  session = tf.Session(config=config)
+  tf.keras.backend.set_session(session)
   start_time = time.time()
       
   if func_args['rule_name'] == "rescale":

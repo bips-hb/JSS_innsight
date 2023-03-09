@@ -7,6 +7,8 @@ def get_dense_model(shape, name, save = True, act = "relu", bias = True, num_out
   import torch
   import torch.nn as nn
   
+  torch.set_num_threads(int(1))
+  
   ## Define model
   # first layer
   model = nn.Sequential(
@@ -35,6 +37,8 @@ def get_2D_model(shape, name, save = True, act = "relu", bias = True,
     pooling = "none", bn = "none", num_outputs = 5, src_dir = "models"):
   import torch
   import torch.nn as nn
+  
+  torch.set_num_threads(int(1))
   
   in_channels = int(shape[0])
   if act == "relu":

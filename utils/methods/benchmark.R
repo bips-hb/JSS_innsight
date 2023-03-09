@@ -57,9 +57,6 @@ benchmark <- function(methods, model_config, show = FALSE, src_dir = "tmp") {
                 model_config = model_config[model_config$api == "torch", ],
                 src_dir = src_dir),
     show = show, spinner = FALSE)
-  res_zennit <- combine_results(res_innsight, res_zennit)
-  save(res_zennit, file = paste0(src_dir, "/results/result_zennit.RData"))
-  rm(res_innsight)
 
   # Benchmark innsight vs captum ----------------------------------------------
   cli_h3("Benchmarking {.pkg innsight} vs. {.pkg captum}")
@@ -77,9 +74,6 @@ benchmark <- function(methods, model_config, show = FALSE, src_dir = "tmp") {
                 model_config = model_config[model_config$api == "torch", ],
                 src_dir = src_dir),
     show = show, spinner = FALSE)
-  res_captum <- combine_results(res_innsight, res_captum)
-  save(res_captum, file = paste0(src_dir, "/results/result_captum.RData"))
-  rm(res_innsight)
 
   # Benchmark innsight vs innvestigate -----------------------------------------
   cli_h3("Benchmarking {.pkg innsight} vs. {.pkg innvestigate}")
@@ -98,9 +92,6 @@ benchmark <- function(methods, model_config, show = FALSE, src_dir = "tmp") {
                 model_config = model_config[model_config$api == "keras", ],
                 src_dir = src_dir),
     show = show, spinner = FALSE)
-  res_innvestigate <- combine_results(res_innsight, res_innvestigate)
-  save(res_innvestigate, file = paste0(src_dir, "/results/result_innvestigate.RData"))
-  rm(res_innsight)
 
   # Benchmark innsight vs deeplift -----------------------------------------
   cli_h3("Benchmarking {.pkg innsight} vs. {.pkg deeplift}")
@@ -118,19 +109,9 @@ benchmark <- function(methods, model_config, show = FALSE, src_dir = "tmp") {
                 model_config = model_config[model_config$api == "keras", ],
                 src_dir = src_dir),
     show = show, spinner = FALSE)
-  res_deeplift <- combine_results(res_innsight, res_deeplift)
-  save(res_deeplift, file = paste0(src_dir, "/results/result_deeplift.RData"))
-  rm(res_innsight)
   cli_progress_cleanup()
 
-  result <- list(
-    rbind(
-      res_zennit[[1]], res_captum[[1]], res_innvestigate[[1]], res_deeplift[[1]]
-      ),
-    rbind(
-      res_zennit[[2]], res_captum[[2]], res_innvestigate[[2]], res_deeplift[[2]]
-    )
-  )
+  result <- get_results(src_dir)
 
 
   # Set the order
@@ -252,6 +233,7 @@ apply_benchmark <- function(pkg, methods, model_config, ref_pkg,
           },
           error = function(e){
             warning("Look at index: ", i)
+            print(e)
             res <- list(total_time = NA, eval_time = NA,
                         convert_time = NA, result = array(NA))
             res
@@ -261,18 +243,18 @@ apply_benchmark <- function(pkg, methods, model_config, ref_pkg,
         result[i, "time_eval"] <- res$eval_time
         result[i, "time_convert"] <- res$convert_time
         result[i, "result"] <- list(list(list(as.array(res$result))))
-      }
 
+        saveRDS(result,
+                file = paste0(src_dir, "/results/result-", method, "-", pkg, "-",
+                              ref_pkg, ".rds"))
+      }
 
       time_diff <- Sys.time() - start_time
       time_str <- col_grey(paste0(" [", round(time_diff, 1), attributes(time_diff)$units, "]"))
       cli_bullets(c("v" = paste0(d_method$method, time_str)))
-
-      results <- rbind(results, result)
     }
   }
 
-  results
 }
 
 
@@ -353,6 +335,9 @@ load_pytorch_model <- function(config, src_dir) {
   pytorch_models = reticulate::import_from_path("models_pytorch",
                                                 here::here("utils/preprocess/"))
   import_torch <- reticulate::import("torch")
+
+  import_torch$set_num_threads(1L)
+
   input_shape <- config$input_shape[[1]][-1]
 
   # move channels first
@@ -391,6 +376,47 @@ get_rule <- function(rule_name, rule_arg, rule_spec) {
   rule_arg[rule_spec$layer] <- rule_spec$rule_param
 
   list(rule_name, rule_arg)
+}
+
+get_results <- function(src_dir) {
+  result_names <- list.files(paste0(src_dir, "/results/"))
+
+  fun <- function(x) {
+    s <- strsplit(x, "-")[[1]]
+    s[length(s)] <- strsplit(s[length(s)], "[.]")[[1]][1]
+    s <- c(s[seq_len(length(s) - 2)], s[length(s)], s[length(s) - 1])
+    s <- paste0(paste0(s, collapse = "-"), ".rds")
+
+    combine_results(
+      readRDS(paste0(src_dir, "/results/", s)),
+      readRDS(paste0(src_dir, "/results/", x))
+    )
+  }
+
+  library(data.table)
+
+  res_error <- data.table()
+  res_time <- data.table()
+
+  pkgs <- c("zennit", "captum", "innvestigate", "deeplift")
+  for (pkg in pkgs) {
+    res <-
+      lapply(
+        result_names[grepl(paste0(pkg, "-innsight"), result_names)],
+        FUN = fun)
+
+    res_error <- rbind(
+      res_error,
+      do.call("rbind", lapply(res, function(x) x[[1]]))
+    )
+
+    res_time <- rbind(
+      res_time,
+      do.call("rbind", lapply(res, function(x) x[[2]]))
+    )
+  }
+
+  list(res_error, res_time)
 }
 
 combine_results <- function(df1, df2) {
@@ -462,13 +488,11 @@ load_conda_envs <- function(pkg) {
         } else if (pkg %in% c("innvestigate", "innsight_keras")) {
           Sys.setenv("RETICULATE_PYTHON" = reticulate::conda_python("JSS_innsight_tf_2"))
           reticulate::use_condaenv("JSS_innsight_tf_2")
-          print("before")
           reticulate::py_capture_output({
             keras::use_condaenv("JSS_innsight_tf_2")
             tensorflow::tf$random$set_seed(123)
             library(keras)
           })
-          print("after")
           library(innsight)
         } else {
           library(innsight)

@@ -6,7 +6,14 @@
 get_dense_model <- function(shape, name, save = TRUE, act_name = "relu",
                             bias = TRUE, num_outputs = 5, src_dir = "models") {
   library(keras)
+  library(tensorflow)
   k_clear_session()
+
+  config <- tf$compat$v1$ConfigProto(intra_op_parallelism_threads = 1L,
+                                     inter_op_parallelism_threads = 1L)
+  session = tf$compat$v1$Session(config=config)
+  tf$compat$v1$keras$backend$set_session(session)
+
 
   ## Define model
   # first layer
@@ -39,7 +46,13 @@ get_2D_model <- function(shape, name, save = TRUE, act_name = "relu",
                          bias = TRUE, pooling = "none", bn = "none",
                          num_outputs = 5, src_dir = "models") {
   library(keras)
+  library(tensorflow)
   k_clear_session()
+
+  config <- tf$compat$v1$ConfigProto(intra_op_parallelism_threads = 1L,
+                           inter_op_parallelism_threads = 1L)
+  session = tf$compat$v1$Session(config=config)
+  tf$compat$v1$keras$backend$set_session(session)
 
   # Define model
   model <- keras_model_sequential(input_shape = shape) %>%

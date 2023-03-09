@@ -14,8 +14,11 @@ def apply_Gradient(model_path, inputs, func_args = None, num_outputs = int(1)):
   import time
   
   tf.compat.v1.disable_eager_execution()
-  
   k.backend.clear_session()
+  config = tf.compat.v1.ConfigProto(intra_op_parallelism_threads = int(1),
+                                     inter_op_parallelism_threads = int(1))
+  session = tf.compat.v1.Session(config=config)
+  tf.compat.v1.keras.backend.set_session(session)
 
   # Load model
   model = k.models.load_model(model_path, compile = False)
@@ -58,8 +61,11 @@ def apply_SmoothGrad(model_path, inputs, func_args = None, num_outputs = int(1))
   import time
   
   tf.compat.v1.disable_eager_execution()
-  
   k.backend.clear_session()
+  config = tf.compat.v1.ConfigProto(intra_op_parallelism_threads = int(1),
+                                     inter_op_parallelism_threads = int(1))
+  session = tf.compat.v1.Session(config=config)
+  tf.compat.v1.keras.backend.set_session(session)
 
   # Load model
   model = k.models.load_model(model_path, compile = False)
@@ -100,6 +106,10 @@ def apply_LRP(model_path, inputs, func_args = None, num_outputs = int(1)):
   
   tf.compat.v1.disable_eager_execution()
   k.backend.clear_session()
+  config = tf.compat.v1.ConfigProto(intra_op_parallelism_threads = int(1),
+                                     inter_op_parallelism_threads = int(1))
+  session = tf.compat.v1.Session(config=config)
+  tf.compat.v1.keras.backend.set_session(session)
 
   # Load model
   model = k.models.load_model(model_path, compile = False)
