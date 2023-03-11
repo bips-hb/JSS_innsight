@@ -1,21 +1,41 @@
 
 ################################################################################
 #
-#   This script creates the figures from Section 5 ("Validation")
+#   This script creates the figures from Section 5.1 ("Validation")
 #
 ################################################################################
 
+# Load required packages
+library(innsight)
+library(torch)
+library(keras)
+library(callr)
+library(data.table)
+library(R.utils)
+library(cli)
+library(ggplot2)
+library(scales)
+library(ggsci)
+library(latex2exp)
 
+# Keras and torch have to be installed properly
+if (!is_keras_available()) {
+  stop("Install Keras/TensorFlow via 'keras::install_keras()'")
+}
+if (!torch_is_installed()) {
+  stop("Install libTorch via 'torch::install_torch()'")
+}
+
+################################################################################
 #---------------------- Configuration and pre-processing -----------------------
+################################################################################
 
-# Define attributes
-num_models <- 1
-num_outputs <- c(1) #, 5)
-src_dir <- "5_Validation"
-generate_models <- TRUE
-run_benchmark <- TRUE
-batch_size <- 5
-show <- TRUE # only for debugging
+# Global settings
+num_models <- 50
+num_outputs <- c(1, 5)
+src_dir <- "5_Validation/5_1_Correctness"
+batch_size <- 32
+show <- TRUE
 
 # Define experiment configs
 # models for tabular data
@@ -47,42 +67,22 @@ methods <- c(
 )
 
 # Generate models
-if (generate_models) {
-  source("utils/preprocess/preprocess.R")
-  model_config <- preprocess(num_models, config, src_dir)
-} else {
-  cli_progress_step("Loading model configuration file")
-  path <- paste0(src_dir, "/model_config.rds")
-  if (file.exists(path)) {
-    model_config <- readRDS(path)
-  } else {
-    cli::cli_abort("Couldn't find file {.code model_config.rds} in folder ./{src_dir}/!")
-  }
-}
+source("5_Validation/utils/preprocess/preprocess.R")
+model_config <- preprocess(num_models, config, src_dir)
 
-#-------------------------- Create benchmark results ---------------------------
+################################################################################
+#------------------------------ Run benchmark ----------------------------------
+################################################################################
 
-# Start benchmark
-if (run_benchmark) {
-  source("utils/methods/benchmark.R")
-  result <- benchmark(methods, model_config, show, src_dir)
-} else {
-  cli_progress_step("Loading results")
-  path <- paste0(src_dir, "/results.rds")
-  if (file.exists(path)) {
-    result <- readRDS(path)
-  } else {
-    cli::cli_abort("Couldn't find file {.code results.rds} in folder ./{src_dir}/!")
-  }
-}
+source("5_Validation/utils/methods/benchmark.R")
+result <- benchmark(methods, model_config, show, src_dir)
 
+################################################################################
 # ------------------------------- Create plots ---------------------------------
+################################################################################
+
 cli::cli_h2("Creating Plots")
-library(ggplot2)
-library(scales)
-library(ggsci)
-library(latex2exp)
-source("utils/utils.R")
+source("5_Validation/utils/utils.R")
 
 # result with the MAE error
 res_error <- result[[1]]
@@ -94,27 +94,31 @@ if (!dir.exists(paste0(src_dir, "/figures"))) {
 # Gradient-based methods
 p <- ggplot(res_error[res_error$method_grp %in% c("Gradient-based"), ]) +
   geom_violin(aes(y = error, x = pkg, fill = method), scale = "width") +
-  facet_wrap(vars(method_grp), scales = "free_x", ncol = 2, strip.position = "top") +
+  facet_wrap(vars(method_grp), scales = "free_x", ncol = 2,
+             strip.position = "top") +
   scale_y_continuous(trans = log10_with_0_trans(9), limits = c(0, 1e0)) +
   add_gray_box() +
-  scale_fill_manual(values = pal_npg(c("nrc"), 1)(7)[1:2], labels = c("Gradient", TeX("Gradient $\\times$ Input"))) +
+  scale_fill_manual(values = pal_npg(c("nrc"), 1)(7)[1:2],
+                    labels = c("Gradient", TeX("Gradient$\\times$Input"))) +
   geom_hline(yintercept = 0, alpha = 0.5) +
-  ylab("Mean Absolute Error (MAE)") + xlab("Package") + theme_bw() +
+  ylab("Mean absolute error (MAE)") + xlab("Package") + theme_bw() +
   labs(fill = NULL) + theme(legend.position="top")
-ggsave(paste0(src_dir, "/figures/mae_gradient_based.pdf"), p, width = 3.8, height = 3.5)
+ggsave(paste0(src_dir, "/figures/mae_gradient_based.pdf"), p, width = 5, height = 5)
 
 # DeepLift
 p <- ggplot(res_error[res_error$method_grp %in% c("DeepLift"), ]) +
   geom_violin(aes(y = error, x = pkg, fill = method),) +
-  facet_wrap(vars(method_grp), scales = "free_x", ncol = 2, strip.position = "top") +
+  facet_wrap(vars(method_grp), scales = "free_x", ncol = 2,
+             strip.position = "top") +
   scale_y_continuous(trans = log10_with_0_trans(9), limits = c(0, 1e0)) +
   add_gray_box() +
-  scale_fill_manual(values = pal_npg(c("nrc"), 1)(7)[3:4], labels = c("Rescale", "RevealCancel")) +
+  scale_fill_manual(values = pal_npg(c("nrc"), 1)(7)[3:4],
+                    labels = c("Rescale", "RevealCancel")) +
   geom_hline(yintercept = 0, alpha = 0.5) +
   ylab(NULL) + xlab("Package") + theme_bw() +
   labs(fill = NULL) +
   theme(legend.position="top")
-ggsave(paste0(src_dir, "/figures/mae_deeplift.pdf"), p, width = 3.8, height = 3.5)
+ggsave(paste0(src_dir, "/figures/mae_deeplift.pdf"), p, width = 5, height = 5)
 
 # LRP
 p <- ggplot(res_error[res_error$method_grp %in% c("LRP"), ]) +
@@ -123,9 +127,10 @@ p <- ggplot(res_error[res_error$method_grp %in% c("LRP"), ]) +
   scale_y_continuous(trans = log10_with_0_trans(9), limits = c(0, 1e0)) +
   add_gray_box() +
   scale_fill_manual(values = pal_npg(c("nrc"), 1)(7)[5:7],
-                    labels = c("simple rule", TeX("$\\epsilon$-rule"), TeX("$\\alpha$-$\\beta$-rule"))) +
+                    labels = c("simple rule", TeX("$\\epsilon$-rule"),
+                               TeX("$\\alpha$-$\\beta$-rule"))) +
   geom_hline(yintercept = 0, alpha = 0.5) +
   ylab(NULL) + xlab("Package") + theme_bw() +
   labs(fill = NULL) +
   theme(legend.position="top")
-ggsave(paste0(src_dir, "/figures/mae_lrp.pdf"), p, width = 3.8, height = 3.5)
+ggsave(paste0(src_dir, "/figures/mae_lrp.pdf"), p, width = 5, height = 5)

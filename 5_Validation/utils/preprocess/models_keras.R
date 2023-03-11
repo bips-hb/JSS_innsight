@@ -4,7 +4,8 @@
 ###############################################################################
 
 get_dense_model <- function(shape, name, save = TRUE, act_name = "relu",
-                            bias = TRUE, num_outputs = 5, src_dir = "models") {
+                            bias = TRUE, num_outputs = 5, src_dir = "models",
+                            depth = 1, width = 64) {
   library(keras)
   library(tensorflow)
   k_clear_session()
@@ -18,8 +19,14 @@ get_dense_model <- function(shape, name, save = TRUE, act_name = "relu",
   ## Define model
   # first layer
   model <- keras_model_sequential(input_shape = shape) %>%
-    layer_dense(units = 32, activation = act_name, use_bias = bias,
+    layer_dense(units = width, activation = act_name, use_bias = bias,
                 bias_initializer = "glorot_uniform")
+
+  for (i in seq_len(depth - 1)) {
+    model %>%
+      layer_dense(units = width, activation = act_name, use_bias = bias,
+                  bias_initializer = "glorot_uniform")
+  }
 
   # last layer
   model %>%

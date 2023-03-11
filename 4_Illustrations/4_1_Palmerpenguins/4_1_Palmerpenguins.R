@@ -1,3 +1,10 @@
+
+################################################################################
+#     This script can be used to reproduce the results from Section 4.1
+#                     (Example 1: Penguin dataset)
+################################################################################
+
+# Load packages
 library(palmerpenguins)
 library(innsight)
 library(neuralnet)
@@ -14,7 +21,7 @@ data <- na.omit(penguins[, c(1,3,4,5,6)])
 # Normalize data
 data[, 2:5] <- scale(data[, 2:5])
 
-# We use 10% of the data as test data
+# We use 25% of the data as test data
 train_idx <- sample.int(nrow(data), as.integer(nrow(data) * 0.75))
 train_data <- data[train_idx, ]
 test_data <- data[-train_idx, ]
@@ -49,10 +56,10 @@ library(ggplot2)
 p <- plot(lrp, data_idx = c(1, 76), output_idx = c(1,3)) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, vjust = 0.6))
-ggsave("7_Illustration/7_1_Palmerpenguins/penguin_plot.pdf", print(p), width = 5, height = 5)
+ggsave("4_Illustrations/4_1_Palmerpenguins/penguin_plot.pdf", print(p), width = 5, height = 5)
 
 p <- boxplot(lrp, output_idx = c(1,3), preprocess_FUN = identity, ref_data_idx = 1) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, vjust = 0.6))
-ggsave("7_Illustration/7_1_Palmerpenguins/penguin_boxplot.pdf", print(p), width = 5, height = 5)
+ggsave("4_Illustrations/4_1_Palmerpenguins/penguin_boxplot.pdf", print(p), width = 5, height = 5)
 

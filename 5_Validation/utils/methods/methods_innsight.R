@@ -18,7 +18,7 @@ apply_Gradient <- function(model, inputs, func_args = NULL, num_outputs = NULL) 
   input_time <- Sys.time()
   grad <- Gradient$new(c, inputs, times_input = func_args$times_input,
                        channels_first = func_args$channels_first,
-                       dtype = "float")$result[[1]][[1]]
+                       output_idx = seq_len(num_outputs))$result[[1]][[1]]
   end_time <- Sys.time()
 
   list(
@@ -48,7 +48,7 @@ apply_SmoothGrad <- function(model, inputs, func_args = NULL, num_outputs = NULL
   grad <- SmoothGrad$new(c, inputs, times_input = func_args$times_input,
                        channels_first = func_args$channels_first,
                        n = func_args$n, noise_level = func_args$noise_level,
-                       dtype = "float")$result[[1]][[1]]
+                       output_idx = seq_len(num_outputs))$result[[1]][[1]]
   end_time <- Sys.time()
 
   list(
@@ -78,7 +78,8 @@ apply_LRP <- function(model, inputs, func_args = NULL, num_outputs = NULL) {
   input_time <- Sys.time()
   grad <- LRP$new(c, inputs, rule_name = func_args$rule_name,
                   rule_param = func_args$rule_param,
-                  channels_first = func_args$channels_first)$result[[1]][[1]]
+                  channels_first = func_args$channels_first,
+                  output_idx = seq_len(num_outputs))$result[[1]][[1]]
   end_time <- Sys.time()
 
   list(
@@ -107,7 +108,8 @@ apply_DeepLift <- function(model, inputs, func_args = NULL, num_outputs = NULL) 
 
   input_time <- Sys.time()
   grad <- DeepLift$new(c, inputs, rule_name = func_args$rule_name, x_ref = func_args$x_ref,
-                       channels_first = func_args$channels_first)$result[[1]][[1]]
+                       channels_first = func_args$channels_first,
+                       output_idx = seq_len(num_outputs))$result[[1]][[1]]
   end_time <- Sys.time()
 
   list(

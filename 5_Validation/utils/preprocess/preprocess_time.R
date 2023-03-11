@@ -1,6 +1,6 @@
 
 ###############################################################################
-#        Preprocessing:
+#        Preprocessing for time comparison:
 #                 - Create models from 'config'
 #                 - Create inputs
 ###############################################################################
@@ -86,14 +86,16 @@ create_torch_models <- function(config, src_dir) {
   py_torch$manual_seed(42)
 
   # create models
-  py_method = reticulate::import_from_path("models_pytorch", here::here("utils/preprocess/"))
+  py_method = reticulate::import_from_path("models_pytorch",
+                                           here::here("5_Validation/utils/preprocess/"))
   for (i in seq_len(nrow(config))) {
     config_i <- config[i, ]
     if (config_i$data_type == "tabular") {
       py_method$get_dense_model(
         config_i$input_shape[[1]][-1], config_i$model_name, save = TRUE,
         act = config_i$act, bias = config_i$bias,
-        num_outputs = config_i$num_outputs, src_dir = src_dir)
+        num_outputs = config_i$num_outputs, src_dir = src_dir,
+        depth = config_i$hidden_depth, width = config_i$hidden_width)
     } else if (config_i$data_type == "image") {
       py_method$get_2D_model(
         config_i$input_shape[[1]][-1][c(3,1,2)], config_i$model_name,
@@ -120,14 +122,15 @@ create_keras_models <- function(config, src_dir) {
   tensorflow::tf$set_random_seed(123)
 
   # craete models
-  source("utils/preprocess/models_keras.R")
+  source("5_Validation/utils/preprocess/models_keras.R")
   for (i in seq_len(nrow(config))) {
     config_i <- config[i, ]
     if (config_i$data_type == "tabular") {
       get_dense_model(
         config_i$input_shape[[1]][-1], config_i$model_name, save = TRUE,
         act = config_i$act, bias = config_i$bias,
-        num_outputs = config_i$num_outputs, src_dir = src_dir)
+        num_outputs = config_i$num_outputs, src_dir = src_dir,
+        depth = config_i$hidden_depth, width = config_i$hidden_width)
     } else if (config_i$data_type == "image") {
       get_2D_model(
         config_i$input_shape[[1]][-1], config_i$model_name,

@@ -5,8 +5,8 @@ library(keras)
 #                            Global attributes
 ###############################################################################
 
-FILE_TEST_CSV = "/home/niklas/Downloads/siim-isic-melanoma/test.csv"#"/opt/example-data/siim-isic-melanoma/test.csv"
-IMAGE_SHAPE <- c(128, 128, 3)
+FILE_TEST_CSV = "/home/niklas/Downloads/siim-isic-melanoma/train.csv"#"/opt/example-data/siim-isic-melanoma/test.csv"
+IMAGE_SHAPE <- c(224, 224, 3)
 TAB_NAMES <- c("sex", "age", "location")
 TAB_NAMES_DEC <- c("sex_male", "sex_female", "age",
                    "loc_head_neck", "loc_torso", "loc_upper_extrem",
@@ -18,7 +18,7 @@ TAB_NAMES_DEC <- c("sex_male", "sex_female", "age",
 ###############################################################################
 
 # Load keras model
-model_path <- paste0('4_Illustrations/checkpoints/model_', IMAGE_SHAPE[1], '_', IMAGE_SHAPE[2])
+model_path <- paste0('4_Illustrations/4_2_Melanoma/checkpoints/model_', IMAGE_SHAPE[1], '_', IMAGE_SHAPE[2])
 if (dir.exists(model_path)) {
   keras_model <- load_model_tf(model_path)
 } else {
@@ -40,20 +40,38 @@ converter <- Converter$new(keras_model, input_names = input_names)
 ###############################################################################
 #                           Load test instance
 ###############################################################################
-source("7_Illustration/utils.R")
+source("4_Illustrations/4_2_Melanoma/utils.R")
 
-index <- c(2)
+mean(test_df[test_df$target == 1, ]$age_approx)
+mean(test_df$age_approx, na.rm = TRUE)
+
+index <- c(2) # 4363 1818 1810 5302
 
 test_df <- read.csv(FILE_TEST_CSV)
 
 input <- get_input(test_df, index)
 
-grad <- Gradient$new(converter, input, channels_first = FALSE,  times_input = TRUE)
+rule_name <- list(
+  Conv2D_Layer = "alpha_beta"
+)
 
-plot(grad)
+rule_param <- list(
+  Conv2D_Layer = 2
+)
+
+grad <- LRP$new(converter, input, channels_first = FALSE, rule_name = rule_name,
+                rule_param = rule_param)
+
+grad <- Gradient$new(converter, input, channels_first = FALSE, times_input = FALSE)
+
+p <- plot(grad, as_plotly = FALSE)
+p[1,1] <- p[1,1] + scale_fill_gradient2()
 
 image <- input[[1]]
-dim(image) <- c(128,128,3)
+dim(image) <- c(224,224,3)
+image[,,1] <- image[,,1] + 0.80612123
+image[,,2] <- image[,,2] + 0.62106454
+image[,,3] <- image[,,3] + 0.591202
 plot.new()
 rasterImage(image, xleft = 0, xright = 1,
             ytop = 0, ybottom = 1, interpolate = FALSE)

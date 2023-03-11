@@ -10,7 +10,7 @@
 # Define attributes
 num_models <- 20
 num_outputs <- c(1, 5)
-src_dir <- "Appendix_1"
+src_dir <- "Appendix_A"
 generate_models <- TRUE
 run_benchmark <- TRUE
 batch_size <- 50

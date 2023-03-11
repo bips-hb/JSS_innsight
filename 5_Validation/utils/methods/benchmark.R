@@ -138,7 +138,7 @@ apply_benchmark <- function(pkg, methods, model_config, ref_pkg,
   cli_text("")
 
   results <- data.table()
-  source("utils/methods/benchmark.R")
+  source("5_Validation/utils/methods/benchmark.R")
 
   # Load conda environments
   load_conda_envs(pkg)
@@ -162,7 +162,7 @@ apply_benchmark <- function(pkg, methods, model_config, ref_pkg,
 
       # Load method function for selected package -----------------------------
       if (startsWith(pkg, "innsight")) {
-        source("utils/methods/methods_innsight.R")
+        source("5_Validation/utils/methods/methods_innsight.R")
         func <- switch(d_method$m_group,
                        Gradient = apply_Gradient,
                        SmoothGrad = apply_SmoothGrad,
@@ -179,7 +179,7 @@ apply_benchmark <- function(pkg, methods, model_config, ref_pkg,
         }
       } else {
         py_methods <- reticulate::import_from_path(paste0("methods_", pkg),
-                                                   here::here("utils/methods/"))
+                                                   here::here("5_Validation/utils/methods/"))
         func <- py_methods[[paste0("apply_", d_method$m_group)]]
       }
 
@@ -243,15 +243,15 @@ apply_benchmark <- function(pkg, methods, model_config, ref_pkg,
         result[i, "time_eval"] <- res$eval_time
         result[i, "time_convert"] <- res$convert_time
         result[i, "result"] <- list(list(list(as.array(res$result))))
-
-        saveRDS(result,
-                file = paste0(src_dir, "/results/result-", method, "-", pkg, "-",
-                              ref_pkg, ".rds"))
       }
 
       time_diff <- Sys.time() - start_time
       time_str <- col_grey(paste0(" [", round(time_diff, 1), attributes(time_diff)$units, "]"))
       cli_bullets(c("v" = paste0(d_method$method, time_str)))
+
+      saveRDS(result,
+              file = paste0(src_dir, "/results/result-", method, "-", pkg, "-",
+                            ref_pkg, ".rds"))
     }
   }
 
@@ -307,7 +307,7 @@ deparse_method <- function(method) {
 
 
 load_torch_model <- function(config, src_dir) {
-  source("utils/preprocess/models_torch.R")
+  source("5_Validation/utils/preprocess/models_torch.R")
   input_shape <- config$input_shape[[1]][-1]
 
   # move channels first
@@ -315,8 +315,13 @@ load_torch_model <- function(config, src_dir) {
                         input_shape[length(input_shape)], after = 0)
   # Get model
   if (config$data_type == "tabular") {
+    depth <- config$hidden_depth
+    width <- config$hidden_width
+    if (is.null(depth)) depth <- 1
+    if (is.null(width)) width <- 64
+
     model <- get_dense_model(input_shape, config$act, config$bias,
-                             config$num_outputs)
+                             config$num_outputs, width, depth)
   } else if (config$data_type == "image") {
     model <- get_2D_model(input_shape, config$act, config$bias,
                           config$pooling, config$batchnorm,
@@ -333,7 +338,7 @@ load_torch_model <- function(config, src_dir) {
 
 load_pytorch_model <- function(config, src_dir) {
   pytorch_models = reticulate::import_from_path("models_pytorch",
-                                                here::here("utils/preprocess/"))
+                                                here::here("5_Validation/utils/preprocess/"))
   import_torch <- reticulate::import("torch")
 
   import_torch$set_num_threads(1L)
@@ -346,8 +351,14 @@ load_pytorch_model <- function(config, src_dir) {
 
   # Get model
   if (config$data_type == "tabular") {
+    depth <- config$hidden_depth
+    width <- config$hidden_width
+    if (is.null(depth)) depth <- 1
+    if (is.null(width)) width <- 64
+
     model <- pytorch_models$get_dense_model(input_shape, "", FALSE, config$act,
-                                            config$bias, num_outputs = config$num_outputs)
+                                            config$bias, num_outputs = config$num_outputs,
+                                            depth = depth, width = width)
   } else if (config$data_type == "image") {
     model <- pytorch_models$get_2D_model(
       input_shape, "", FALSE, config$act, config$bias, config$pooling,
@@ -417,6 +428,19 @@ get_results <- function(src_dir) {
   }
 
   list(res_error, res_time)
+}
+
+get_results_time <- function(src_dir) {
+  library(data.table)
+  result_names <- list.files(paste0(src_dir, "/results/"))
+
+  args <- lapply(result_names,
+                 function(x) readRDS(paste0(src_dir, "/results/", x))[, -"result"])
+
+  res <- do.call("rbind", args)
+  res$method_grp[res$method_grp == "Gradient"] <- "Gradient-based"
+
+  res
 }
 
 combine_results <- function(df1, df2) {

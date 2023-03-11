@@ -3,24 +3,35 @@
 #                           PyTorch dense models
 ###############################################################################
 
-def get_dense_model(shape, name, save = True, act = "relu", bias = True, num_outputs = 1, src_dir = "models"):
+def get_dense_model(shape, name, save = True, act = "relu", bias = True, num_outputs = 1, 
+                    src_dir = "models", depth = 1, width = 64):
   import torch
   import torch.nn as nn
   
   torch.set_num_threads(int(1))
   
+  depth = int(depth)
+  width = int(width)
+  
   ## Define model
   # first layer
   model = nn.Sequential(
-    nn.Linear(int(shape), 64,  bias = bias)
+    nn.Linear(int(shape), width,  bias = bias)
   )
   if act == "relu":
     model.add_module("first_act", nn.ReLU())
   elif act == "tanh":
     model.add_module("first_act", nn.Tanh())
     
+  for i in range(depth - 1):
+    model.add_module("layer_" + str(i + 1), nn.Linear(width, width, bias = bias))
+    if act == "relu":
+      model.add_module("act_" + str(i + 1), nn.ReLU())
+    elif act == "tanh":
+      model.add_module("act_" + str(i + 1), nn.Tanh())
+    
   # second layer
-  model.add_module("second_layer", nn.Linear(64, int(num_outputs), bias = bias))
+  model.add_module("last_layer", nn.Linear(width, int(num_outputs), bias = bias))
   
   # save model
   if save:

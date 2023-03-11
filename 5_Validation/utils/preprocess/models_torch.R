@@ -3,20 +3,29 @@
 #                           Torch dense models
 ###############################################################################
 
-get_dense_model <- function(shape, act, bias, num_outputs) {
+get_dense_model <- function(shape, act, bias, num_outputs, width = 64, depth = 1) {
   library(torch)
 
   ## Define model
   # first layer
-  model <- nn_sequential(nn_linear(shape, 64, bias = bias))
+  model <- nn_sequential(nn_linear(shape, width, bias = bias))
   if (act == "relu") {
     model$add_module("first_act", nn_relu())
   } else if (act == "tanh") {
     model$add_module("first_act", nn_tanh())
   }
 
+  for (i in seq_len(depth - 1)) {
+    model$add_module(paste0("layer_", i), nn_linear(width, width, bias = bias))
+    if (act == "relu") {
+      model$add_module(paste0("act_", i), nn_relu())
+    } else if (act == "tanh") {
+      model$add_module(paste0("act_", i), nn_tanh())
+    }
+  }
+
   # second layer
-  model$add_module("second_layer", nn_linear(64, num_outputs, bias = bias))
+  model$add_module("last_layer", nn_linear(width, num_outputs, bias = bias))
 
   model
 }

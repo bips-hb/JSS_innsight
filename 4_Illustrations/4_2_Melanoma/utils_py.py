@@ -4,13 +4,14 @@ import pandas as pd
 from tqdm import tqdm
 import os
 
+CHANNEL_MEANS = np.array((0.80612123, 0.62106454, 0.591202)).reshape((1,1,3))
 
 def get_image(img_path, size):
   image = tf.keras.preprocessing.image.load_img(img_path)
   image = tf.keras.preprocessing.image.img_to_array(image)
   image = tf.image.resize(image,size).numpy()
     
-  return image / 255.0
+  return image / 255.0 - CHANNEL_MEANS
   
   
 def preapare_images(source, dest, shape):
@@ -33,7 +34,7 @@ def encode_df(df, img_source):
     'image_name': img_source + df['image_name'] + '.npy',
     'sex_male': (df['sex'] == 'male').astype(float),
     'sex_female': (df['sex'] == 'female').astype(float),
-    'age': df['age_approx'],
+    'age': df['age_approx'] / 90.0 - 0.5430002,
     'loc_head_neck': (df['anatom_site_general_challenge'] == 'head/neck').astype(float),
     'loc_torso': (df['anatom_site_general_challenge'] == 'torso').astype(float),
     'loc_upper_extrem': (df['anatom_site_general_challenge'] == 'upper extremity').astype(float),

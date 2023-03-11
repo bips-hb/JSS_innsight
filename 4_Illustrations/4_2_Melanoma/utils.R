@@ -12,7 +12,7 @@ encode_categorical <- function(df, img_source) {
     image_name = paste0(img_source, df$image_name, ".npy"),
     sex_male = as.numeric(df$sex == "male"),
     sex_female = as.numeric(df$sex == "female"),
-    age = df$age_approx,
+    age = df$age_approx / 90.0 - 0.5430002,
     loc_head_neck = as.numeric(df$anatom_site_general_challenge == "head/neck"),
     loc_torso = as.numeric(df$anatom_site_general_challenge == "torso"),
     loc_upper_extrem = as.numeric(df$anatom_site_general_challenge == "upper extremity"),
@@ -32,7 +32,7 @@ load_np_arrays <- function(paths) {
 }
 
 get_input <- function(df, index) {
-  df <- encode_categorical(df[index, ], "4_Illustrations/data/test/")
+  df <- encode_categorical(df[index, ], "4_Illustrations/4_2_Melanoma/data/train/")
   img_data <- load_np_arrays(df$image_name)
   tab_data <- as.matrix(df[, 2:11])
   colnames(tab_data) <- NULL
