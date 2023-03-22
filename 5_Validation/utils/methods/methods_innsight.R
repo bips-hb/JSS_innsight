@@ -4,7 +4,6 @@
 ###############################################################################
 apply_Gradient <- function(model, inputs, func_args = NULL, num_outputs = NULL) {
   library(torch)
-  torch_set_num_threads(1L)
 
   if (torch::is_nn_module(model)) {
     input_dim <- dim(inputs)[-1]
@@ -33,7 +32,6 @@ apply_Gradient <- function(model, inputs, func_args = NULL, num_outputs = NULL) 
 ###############################################################################
 apply_SmoothGrad <- function(model, inputs, func_args = NULL, num_outputs = NULL) {
   library(torch)
-  torch_set_num_threads(1L)
 
   if (torch::is_nn_module(model)) {
     input_dim <- dim(inputs)[-1]
@@ -63,7 +61,6 @@ apply_SmoothGrad <- function(model, inputs, func_args = NULL, num_outputs = NULL
 ###############################################################################
 apply_LRP <- function(model, inputs, func_args = NULL, num_outputs = NULL) {
   library(torch)
-  torch_set_num_threads(1L)
 
   if (torch::is_nn_module(model)) {
     input_dim <- dim(inputs)[-1]
@@ -95,7 +92,6 @@ apply_LRP <- function(model, inputs, func_args = NULL, num_outputs = NULL) {
 
 apply_DeepLift <- function(model, inputs, func_args = NULL, num_outputs = NULL) {
   library(torch)
-  torch_set_num_threads(1L)
 
   if (torch::is_nn_module(model)) {
     input_dim <- dim(inputs)[-1]

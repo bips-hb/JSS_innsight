@@ -35,7 +35,7 @@ get_dense_model <- function(shape, act, bias, num_outputs, width = 64, depth = 1
 ###############################################################################
 
 get_2D_model <- function(shape, act = "relu", bias = TRUE, pooling = "none",
-                         bn = "none", num_outputs = 5) {
+                         bn = "none", num_outputs = 5, depth = 1, width = 5) {
   library(torch)
 
   in_channels <- shape[1]
@@ -48,17 +48,30 @@ get_2D_model <- function(shape, act = "relu", bias = TRUE, pooling = "none",
   }
 
   ## Define model
-  model <- nn_sequential(
-    nn_conv2d(in_channels, 5, c(4,4), bias = bias)
-  )
-  if (bn == "none") {
-    model$add_module("act_1", activation())
-  } else if (bn == "after_act") {
-    model$add_module("act_1", activation())
-    model$add_module("batchnorm_1", nn_batch_norm2d(5, affine = bias))
-  } else if (bn == "before_act") {
-    model$add_module("batchnorm_1", nn_batch_norm2d(5, affine = bias))
-    model$add_module("act_1", activation())
+  model <- nn_sequential()
+  num_channels <- in_channels
+
+  for (i in seq_len(depth)) {
+    if (i == depth) {
+      kernel_size <- c(4,4)
+      padding <- 0
+    } else {
+      kernel_size <- c(3,3)
+      padding <- 1
+    }
+    model$add_module(paste0("layer_", i), nn_conv2d(num_channels, width,
+                                                    kernel_size, padding = padding))
+    num_channels <- width
+
+    if (bn == "none") {
+      model$add_module(paste0("act_", i), activation())
+    } else if (bn == "after_act") {
+      model$add_module(paste0("act_", i), activation())
+      model$add_module(paste0("batchnorm_", i), nn_batch_norm2d(width, affine = bias))
+    } else if (bn == "before_act") {
+      model$add_module(paste0("batchnorm_", i), nn_batch_norm2d(width, affine = bias))
+      model$add_module(paste0("act_", i), activation())
+    }
   }
 
   if (pooling == "avg") {

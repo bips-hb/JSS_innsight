@@ -184,7 +184,7 @@ def apply_DeepLift(model, inputs, func_args = None, num_outputs = int(1)):
   start_time = time.time()
   inputs = torch.tensor(inputs, dtype = torch.float)
   func_args['x_ref'] = torch.tensor(func_args['x_ref'], dtype = torch.float)
-  dl = DeepLift(model)
+  dl = DeepLift(model, eps = 1e-6)
   convert_time = time.time() - start_time
 
   inp = inputs.clone()

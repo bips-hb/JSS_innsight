@@ -51,7 +51,8 @@ get_dense_model <- function(shape, name, save = TRUE, act_name = "relu",
 
 get_2D_model <- function(shape, name, save = TRUE, act_name = "relu",
                          bias = TRUE, pooling = "none", bn = "none",
-                         num_outputs = 5, src_dir = "models") {
+                         num_outputs = 5, src_dir = "models",
+                         depth = 1, width = 5) {
   library(keras)
   library(tensorflow)
   k_clear_session()
@@ -62,33 +63,40 @@ get_2D_model <- function(shape, name, save = TRUE, act_name = "relu",
   tf$compat$v1$keras$backend$set_session(session)
 
   # Define model
-  model <- keras_model_sequential(input_shape = shape) %>%
-    layer_conv_2d(filters = 5,
-                  strides = if (pooling == "none") c(2L, 2L) else c(1L, 1L),
-                  kernel_size = c(4,4),
-                  activation = if (bn == "before_act") "linear" else act_name,
-                  bias_initializer = "glorot_uniform", use_bias = bias)
+  model <- keras_model_sequential(input_shape = shape)
 
-  # Add batch normalization
-  if (bn == "after_act") {
+  for (i in seq_len(depth)) {
+    strides <- if (pooling == "none" & i == depth) c(2L, 2L) else c(1L, 1L)
+    padding <- if (i == depth) "valid" else "same"
     model %>%
-      layer_batch_normalization(
-        #center = bias,
-        beta_initializer = if (bias) init() else "zeros",
-        gamma_initializer = init(),
-        moving_mean_initializer = if (bias) init() else "zeros",
-        moving_variance_initializer = if (bias) init_plus() else "ones"
-      )
-  } else if (bn == "before_act") {
-    model %>%
-      layer_batch_normalization(
-        #center = bias,
-        beta_initializer = if (bias) init() else "zeros",
-        gamma_initializer = init(),
-        moving_mean_initializer = if (bias) init() else "zeros",
-        moving_variance_initializer = if (bias) init_plus() else "ones"
-      ) %>%
-      layer_activation(activation = act_name)
+      layer_conv_2d(filters = width,
+                    strides = strides,
+                    padding = padding,
+                    kernel_size = c(4,4),
+                    activation = if (bn == "before_act") "linear" else act_name,
+                    bias_initializer = "glorot_uniform", use_bias = bias)
+
+    # Add batch normalization
+    if (bn == "after_act") {
+      model %>%
+        layer_batch_normalization(
+          #center = bias,
+          beta_initializer = if (bias) init() else "zeros",
+          gamma_initializer = init(),
+          moving_mean_initializer = if (bias) init() else "zeros",
+          moving_variance_initializer = if (bias) init_plus() else "ones"
+        )
+    } else if (bn == "before_act") {
+      model %>%
+        layer_batch_normalization(
+          #center = bias,
+          beta_initializer = if (bias) init() else "zeros",
+          gamma_initializer = init(),
+          moving_mean_initializer = if (bias) init() else "zeros",
+          moving_variance_initializer = if (bias) init_plus() else "ones"
+        ) %>%
+        layer_activation(activation = act_name)
+    }
   }
 
   # add pooling

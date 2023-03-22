@@ -13,18 +13,15 @@ library(callr)
 library(data.table)
 library(R.utils)
 library(cli)
-library(ggplot2)
 library(scales)
 library(ggsci)
-library(latex2exp)
 
-# Keras and torch have to be installed properly
-if (!is_keras_available()) {
-  stop("Install Keras/TensorFlow via 'keras::install_keras()'")
-}
-if (!torch_is_installed()) {
-  stop("Install libTorch via 'torch::install_torch()'")
-}
+# Load LaTeX font (Latin modern)
+library(showtext)
+font_add("LModern_math", "/home/koenen/fonts/latinmodern-math.otf")
+showtext_auto()
+library(ggplot2)
+
 
 ################################################################################
 #---------------------- Configuration and pre-processing -----------------------
@@ -93,44 +90,64 @@ if (!dir.exists(paste0(src_dir, "/figures"))) {
 
 # Gradient-based methods
 p <- ggplot(res_error[res_error$method_grp %in% c("Gradient-based"), ]) +
-  geom_violin(aes(y = error, x = pkg, fill = method), scale = "width") +
-  facet_wrap(vars(method_grp), scales = "free_x", ncol = 2,
-             strip.position = "top") +
+  geom_boxplot(aes(y = error, x = pkg, fill = method),
+               outlier.size = 0.75,
+               outlier.alpha = 0.25) +
+  facet_grid(cols = vars(method_grp)) +
   scale_y_continuous(trans = log10_with_0_trans(9), limits = c(0, 1e0)) +
   add_gray_box() +
   scale_fill_manual(values = pal_npg(c("nrc"), 1)(7)[1:2],
-                    labels = c("Gradient", TeX("Gradient$\\times$Input"))) +
+                    labels = c("Gradient", "Gradient\u00D7Input")) +
   geom_hline(yintercept = 0, alpha = 0.5) +
-  ylab("Mean absolute error (MAE)") + xlab("Package") + theme_bw() +
-  labs(fill = NULL) + theme(legend.position="top")
+  labs(y = "Mean absolute error (MAE)",
+       x = "Package",
+       fill = NULL) +
+  theme_bw() +
+  theme(
+    legend.position = "top",
+    legend.spacing.x = unit(8, 'pt'),
+    text = element_text(family = "LModern_math", size = 15))
 ggsave(paste0(src_dir, "/figures/mae_gradient_based.pdf"), p, width = 5, height = 5)
+ggsave(paste0(src_dir, "/figures/mae_gradient_based.png"),
+       p + theme(text = element_text(size = 50)), width = 5, height = 5, dpi = 300)
 
 # DeepLift
 p <- ggplot(res_error[res_error$method_grp %in% c("DeepLift"), ]) +
-  geom_violin(aes(y = error, x = pkg, fill = method),) +
-  facet_wrap(vars(method_grp), scales = "free_x", ncol = 2,
-             strip.position = "top") +
+  geom_boxplot(aes(y = error, x = pkg, fill = method),
+               outlier.size = 0.75,
+               outlier.alpha = 0.25) +
+  facet_grid(cols = vars(method_grp)) +
   scale_y_continuous(trans = log10_with_0_trans(9), limits = c(0, 1e0)) +
   add_gray_box() +
   scale_fill_manual(values = pal_npg(c("nrc"), 1)(7)[3:4],
                     labels = c("Rescale", "RevealCancel")) +
   geom_hline(yintercept = 0, alpha = 0.5) +
-  ylab(NULL) + xlab("Package") + theme_bw() +
-  labs(fill = NULL) +
-  theme(legend.position="top")
+  labs(y = NULL, x = "Package", fill = NULL) +
+  theme_bw() +
+  theme(legend.position="top",
+        legend.spacing.x = unit(8, 'pt'),
+        text = element_text(family="LModern_math", size = 15))
 ggsave(paste0(src_dir, "/figures/mae_deeplift.pdf"), p, width = 5, height = 5)
+ggsave(paste0(src_dir, "/figures/mae_deeplift.png"),
+       p + theme(text = element_text(size = 50)), width = 5, height = 5, dpi = 300)
 
 # LRP
 p <- ggplot(res_error[res_error$method_grp %in% c("LRP"), ]) +
-  geom_violin(aes(y = error, x = pkg, fill = method), scale = "width") +
-  facet_grid(cols = vars(method_grp), rows = vars(bias), scales = "free_x") +
-  scale_y_continuous(trans = log10_with_0_trans(9), limits = c(0, 1e0)) +
+  geom_boxplot(aes(y = error, x = pkg, fill = method),
+               outlier.size = 0.75,
+               outlier.alpha = 0.25) +
+  facet_grid(cols = vars(method_grp), rows = vars(bias)) +
+  scale_y_continuous(trans = log10_with_0_trans(9, 4), limits = c(0, 1e2)) +
   add_gray_box() +
-  scale_fill_manual(values = pal_npg(c("nrc"), 1)(7)[5:7],
-                    labels = c("simple rule", TeX("$\\epsilon$-rule"),
-                               TeX("$\\alpha$-$\\beta$-rule"))) +
   geom_hline(yintercept = 0, alpha = 0.5) +
-  ylab(NULL) + xlab("Package") + theme_bw() +
-  labs(fill = NULL) +
-  theme(legend.position="top")
+  labs(y = NULL, x = "Package", fill = NULL) +
+  theme_bw() +
+  theme(legend.position="top",
+        legend.spacing.x = unit(8, 'pt'),
+        text = element_text(family="LModern_math", size = 15))+
+  scale_fill_manual(values = pal_npg(c("nrc"), 1)(7)[5:7],
+                    labels = c("simple rule", expression(epsilon*"-rule"),
+                               expression(alpha*"-"*beta*"-rule")))
 ggsave(paste0(src_dir, "/figures/mae_lrp.pdf"), p, width = 5, height = 5)
+ggsave(paste0(src_dir, "/figures/mae_lrp.png"),
+       p + theme(text = element_text(size = 50)), width = 5, height = 5, dpi = 300)

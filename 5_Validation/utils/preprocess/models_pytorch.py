@@ -45,32 +45,46 @@ def get_dense_model(shape, name, save = True, act = "relu", bias = True, num_out
 ###############################################################################
 
 def get_2D_model(shape, name, save = True, act = "relu", bias = True, 
-    pooling = "none", bn = "none", num_outputs = 5, src_dir = "models"):
+    pooling = "none", bn = "none", num_outputs = 5, src_dir = "models",
+    depth = 1, width = 5):
   import torch
   import torch.nn as nn
   
   torch.set_num_threads(int(1))
   
   in_channels = int(shape[0])
+  depth = int(depth)
+  width = int(width)
+  
   if act == "relu":
     activation = nn.ReLU
   elif act == "tanh":
     activation = nn.Tanh
     
   # Define model
-  model = nn.Sequential(
-    nn.Conv2d(in_channels, 5, [4,4], bias = bias)
-  )
+  model = nn.Sequential()
+  num_channels = in_channels
   
-  # add batchnorm layer
-  if bn == "none":
-    model.add_module("act_1", activation())
-  elif bn == "after_act":
-    model.add_module("act_1", activation())
-    model.add_module("batchnorm_1", nn.BatchNorm2d(5, affine = bias))
-  elif bn == "before_act":
-    model.add_module("batchnorm_1", nn.BatchNorm2d(5, affine = bias))
-    model.add_module("act_1", activation())
+  for i in range(depth):
+    if i == depth - 1:
+      kernel_size = [4, 4]
+      padding = 0
+    else:
+      kernel_size = [3,3]
+      padding = 1
+    model.add_module("layer_" + str(i+1), nn.Conv2d(num_channels, width, kernel_size, bias = bias, padding = padding))
+    num_channels = width
+    
+    # add batchnorm layer
+    if bn == "none":
+      model.add_module("act_" + str(i+1), activation())
+    elif bn == "after_act":
+      model.add_module("act_" + str(i+1), activation())
+      model.add_module("batchnorm_" + str(i+1), nn.BatchNorm2d(width, affine = bias))
+    elif bn == "before_act":
+      model.add_module("batchnorm_" + str(i+1), nn.BatchNorm2d(width, affine = bias))
+      model.add_module("act_" + str(i+1), activation())
+  
   
   # add pooling layer
   if pooling == "avg":

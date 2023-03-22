@@ -118,7 +118,7 @@ create_keras_models <- function(config, src_dir) {
 
   library(keras)
   library(tensorflow)
-  tensorflow::tf$set_random_seed(123)
+  tensorflow::tf$set_random_seed(42)
 
   # craete models
   source("5_Validation/utils/preprocess/models_keras.R")

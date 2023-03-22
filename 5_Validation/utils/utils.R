@@ -12,9 +12,9 @@ add_gray_box <- function() {
 }
 
 
-log10_with_0_trans <- function(constant = 10) {
+log10_with_0_trans <- function(constant = 10, n = 6) {
   breaks <- function(x) {
-    b <- log_breaks(n = 6, base = 10)(c(10^(-constant + 1), max(abs(x))))
+    b <- log_breaks(n = n, base = 10)(c(10^(-constant + 1), max(abs(x))))
     sort(c(0, b))
   }
   trans_new("log10_with_0_trans",

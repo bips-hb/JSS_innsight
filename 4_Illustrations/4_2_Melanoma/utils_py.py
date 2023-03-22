@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import os
+import math
 
 CHANNEL_MEANS = np.array((0.80612123, 0.62106454, 0.591202)).reshape((1,1,3))
 
@@ -41,7 +42,7 @@ def encode_df(df, img_source):
     'loc_lower_extrem': (df['anatom_site_general_challenge'] == 'lower extremity').astype(float),
     'loc_palms_soles': (df['anatom_site_general_challenge'] == 'palms/soles').astype(float),
     'loc_oral_genital': (df['anatom_site_general_challenge'] == 'oral/genital').astype(float),
-    'loc_missing': (df['anatom_site_general_challenge'] == '').astype(float),
+    'loc_missing': (df['anatom_site_general_challenge'].isna()).astype(float),
     'target': df['target']
   })
   
@@ -63,7 +64,6 @@ class CustomDataGen(tf.keras.utils.Sequence):
         self.input_size = input_size
         self.augment = augment
         self.shuffle = shuffle
-        
         self.n = len(self.df)
     
     def on_epoch_end(self):
@@ -75,17 +75,44 @@ class CustomDataGen(tf.keras.utils.Sequence):
         if self.augment:
           image_batch = tf.image.random_flip_left_right(image_batch)
           image_batch = tf.image.random_flip_up_down(image_batch)
+          image_batch = tf.image.random_brightness(image_batch, 0.2)
+          image_batch = tf.image.random_contrast(image_batch, lower = 0.8, upper = 1.2)
+          image_batch = tf.image.random_hue(image_batch, 0.1)
         tab_batch = batches.iloc[:, 1:11].to_numpy()
         y_batch = batches['target'].to_numpy()
 
         return [image_batch, tab_batch], y_batch
     
     def __getitem__(self, index):
+        start = index * self.batch_size
+        end = min((index + 1) * self.batch_size, self.n)
         
-        batches = self.df[index * self.batch_size:(index + 1) * self.batch_size]
+        batches = self.df[start:end]
         X, y = self.__get_data(batches)        
         return X, y
     
     def __len__(self):
-        return self.n // self.batch_size
+        return math.ceil(self.n / self.batch_size)
+
+
+def get_predictions(model_path, batch_size, data_csv_path, image_shape = (224, 224, 3)):
+  # Load data csv
+  data_csv = drop_nan(pd.read_csv(data_csv_path))
+  # Create data generator
+  data_gen = CustomDataGen(
+    df = data_csv, 
+    batch_size = int(batch_size),
+    augment = False,
+    img_source = os.getcwd() + '/4_Illustrations/4_2_Melanoma/data/train/', 
+    input_size = image_shape,
+    shuffle = False)
   
+  # load model
+  model = tf.keras.models.load_model(model_path)
+  
+  preds = model.predict(data_gen, batch_size = int(batch_size))
+  
+  return preds
+  
+def drop_nan(df):
+  return df[df["sex"].notna() & df["age_approx"].notna()]

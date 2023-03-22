@@ -101,7 +101,8 @@ create_torch_models <- function(config, src_dir) {
         config_i$input_shape[[1]][-1][c(3,1,2)], config_i$model_name,
         save = TRUE, act = config_i$act, bias = config_i$bias,
         pooling = config_i$pooling, bn = config_i$batchnorm,
-        num_outputs = config_i$num_outputs, src_dir = src_dir)
+        num_outputs = config_i$num_outputs, src_dir = src_dir,
+        depth = config_i$hidden_depth, width = config_i$hidden_width)
     }
   }
 }
@@ -136,7 +137,8 @@ create_keras_models <- function(config, src_dir) {
         config_i$input_shape[[1]][-1], config_i$model_name,
         save = TRUE, act = config_i$act, bias = config_i$bias,
         pooling = config_i$pooling, bn = config_i$batchnorm,
-        num_outputs = config_i$num_outputs, src_dir = src_dir)
+        num_outputs = config_i$num_outputs, src_dir = src_dir,
+        depth = config_i$hidden_depth, width = config_i$hidden_width)
     }
   }
 }

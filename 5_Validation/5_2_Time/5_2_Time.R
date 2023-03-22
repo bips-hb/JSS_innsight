@@ -14,32 +14,32 @@ library(cowplot)
 library(data.table)
 library(R.utils)
 library(cli)
-library(ggplot2)
 library(scales)
 library(ggsci)
-library(latex2exp)
+library(cowplot)
+
+
+# Load LaTeX font (Latin modern)
+library(showtext)
+font_add("LModern_math", "/home/koenen/fonts/latinmodern-math.otf")
+showtext_auto()
+library(ggplot2)
+
+
 source("5_Validation/utils/utils_time.R")
 
-# Keras and torch have to be installed properly
-if (!is_keras_available()) {
-  stop("Install Keras/TensorFlow via 'keras::install_keras()'")
-}
-if (!torch_is_installed()) {
-  stop("Install libTorch via 'torch::install_torch()'")
-}
 
 ################################################################################
 #-------------------- Time comparison for output nodes -------------------------
 ################################################################################
-num_outputs <- c(1, seq(5, 50, by = 5))
+num_outputs <- c(1, seq(10, 100, by = 10))
 num_hidden_layers <- c(2)
-num_hidden_units <- c(64)
-num_inputs <- c(10)
-num_models <- 20
-batch_sizes <- c(32)
+num_hidden_units <- list(c(16), c(5)) # first for tabular (units) and second for image (filters)
+num_models <- 30
+batch_sizes <- c(16)
 src_dir <- "5_Validation/5_2_Time/Num_Outputs"
 
-res <- compare_time(num_models, num_outputs, num_inputs, num_hidden_layers,
+res <- compare_time(num_models, num_outputs, num_hidden_layers,
                     num_hidden_units, src_dir, batch_sizes)
 create_plots(res, "num_outputs", "5_Validation/5_2_Time")
 
@@ -48,13 +48,12 @@ create_plots(res, "num_outputs", "5_Validation/5_2_Time")
 ################################################################################
 num_outputs <- c(1)
 num_hidden_layers <- c(1, seq(5, 50, by = 5))
-num_hidden_units <- c(32)
-num_inputs <- c(10)
-num_models <- 20
-batch_sizes <- c(32)
+num_hidden_units <-  list(c(16), c(5))
+num_models <- 30
+batch_sizes <- c(16)
 src_dir <- "5_Validation/5_2_Time/Num_Layers"
 
-res <- compare_time(num_models, num_outputs, num_inputs, num_hidden_layers,
+res <- compare_time(num_models, num_outputs, num_hidden_layers,
                     num_hidden_units, src_dir, batch_sizes)
 create_plots(res, "hidden_depth", "5_Validation/5_2_Time")
 
@@ -63,13 +62,12 @@ create_plots(res, "hidden_depth", "5_Validation/5_2_Time")
 ################################################################################
 num_outputs <- c(1)
 num_hidden_layers <- c(2)
-num_hidden_units <- c(10, seq(100, 1000, by = 100))
-num_inputs <- c(10)
-num_models <- 20
-batch_sizes <- c(10)
+num_hidden_units <- list(c(10, seq(300, 3000, by = 300)), c(10, seq(100, 1000, by = 100)))
+num_models <- 30
+batch_sizes <- c(16)
 src_dir <- "5_Validation/5_2_Time/Num_Units"
 
-res <- compare_time(num_models, num_outputs, num_inputs, num_hidden_layers,
+res <- compare_time(num_models, num_outputs, num_hidden_layers,
                     num_hidden_units, src_dir, batch_sizes)
 create_plots(res, "hidden_width", "5_Validation/5_2_Time")
 
@@ -78,13 +76,12 @@ create_plots(res, "hidden_width", "5_Validation/5_2_Time")
 ################################################################################
 num_outputs <- c(1)
 num_hidden_layers <- c(2)
-num_hidden_units <- c(32)
-num_inputs <- c(10)
-num_models <- 20
-batch_sizes <- c(10, seq(100, 1000, by = 100))
+num_hidden_units <- list(c(16), c(5))
+num_models <- 30
+batch_sizes <- c(10, seq(300, 3000, by = 300))
 src_dir <- "5_Validation/5_2_Time/Batch_Size"
 
-res <- compare_time(num_models, num_outputs, num_inputs, num_hidden_layers,
+res <- compare_time(num_models, num_outputs, num_hidden_layers,
                     num_hidden_units, src_dir, batch_sizes)
 
 create_plots(res, "batch_size", "5_Validation/5_2_Time")

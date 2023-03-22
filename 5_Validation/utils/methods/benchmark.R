@@ -137,6 +137,9 @@ apply_benchmark <- function(pkg, methods, model_config, ref_pkg,
   set.seed(42)
   cli_text("")
 
+  # Disable GPU usage
+  Sys.setenv("CUDA_VISIBLE_DEVICES" = -1)
+
   results <- data.table()
   source("5_Validation/utils/methods/benchmark.R")
 
@@ -229,7 +232,9 @@ apply_benchmark <- function(pkg, methods, model_config, ref_pkg,
         # Apply method --------------------------------------------------------
         tryCatch(
           expr = {
-            reticulate::py_capture_output(res <- func(model, inputs, func_args, config_i$num_outputs))
+            reticulate::py_capture_output(
+              res <- func(model, inputs, func_args, config_i$num_outputs),
+              type = "stdout")
           },
           error = function(e){
             warning("Look at index: ", i)
@@ -323,9 +328,13 @@ load_torch_model <- function(config, src_dir) {
     model <- get_dense_model(input_shape, config$act, config$bias,
                              config$num_outputs, width, depth)
   } else if (config$data_type == "image") {
+    depth <- config$hidden_depth
+    width <- config$hidden_width
+    if (is.null(depth)) depth <- 1
+    if (is.null(width)) width <- 5
     model <- get_2D_model(input_shape, config$act, config$bias,
                           config$pooling, config$batchnorm,
-                          config$num_outputs)
+                          config$num_outputs, depth, width)
   }
 
   # Load state dict
@@ -340,8 +349,6 @@ load_pytorch_model <- function(config, src_dir) {
   pytorch_models = reticulate::import_from_path("models_pytorch",
                                                 here::here("5_Validation/utils/preprocess/"))
   import_torch <- reticulate::import("torch")
-
-  import_torch$set_num_threads(1L)
 
   input_shape <- config$input_shape[[1]][-1]
 
@@ -360,9 +367,14 @@ load_pytorch_model <- function(config, src_dir) {
                                             config$bias, num_outputs = config$num_outputs,
                                             depth = depth, width = width)
   } else if (config$data_type == "image") {
+    depth <- config$hidden_depth
+    width <- config$hidden_width
+    if (is.null(depth)) depth <- 1
+    if (is.null(width)) width <- 5
     model <- pytorch_models$get_2D_model(
       input_shape, "", FALSE, config$act, config$bias, config$pooling,
-      config$batchnorm, config$num_outputs)
+      config$batchnorm, num_outputs = config$num_outputs,
+      depth = depth, width = width)
   }
 
   # Load state dict
@@ -501,12 +513,15 @@ load_conda_envs <- function(pkg) {
         Sys.setenv(TF_CPP_MIN_LOG_LEVEL = "3")
         if (pkg %in% c("zennit", "captum")) {
           reticulate::use_condaenv("JSS_innsight_pytorch")
+          import_torch <- reticulate::import("torch")
+          import_torch$set_num_threads(1L)
+          import_torch$set_num_interop_threads(1L)
         } else if (pkg == "deeplift") {
           Sys.setenv("RETICULATE_PYTHON" = reticulate::conda_python("JSS_innsight_tf_1"))
           reticulate::use_condaenv("JSS_innsight_tf_1")
           reticulate::py_capture_output({
             keras::use_condaenv("JSS_innsight_tf_1")
-            tensorflow::tf$set_random_seed(123)
+            tensorflow::tf$set_random_seed(42)
             library(keras)
           })
         } else if (pkg %in% c("innvestigate", "innsight_keras")) {
@@ -514,11 +529,17 @@ load_conda_envs <- function(pkg) {
           reticulate::use_condaenv("JSS_innsight_tf_2")
           reticulate::py_capture_output({
             keras::use_condaenv("JSS_innsight_tf_2")
-            tensorflow::tf$random$set_seed(123)
+            tensorflow::tf$random$set_seed(42)
             library(keras)
           })
+          library(torch)
+          torch_set_num_threads(1L)
+          torch_set_num_interop_threads(1L)
           library(innsight)
         } else {
+          library(torch)
+          torch_set_num_threads(1L)
+          torch_set_num_interop_threads(1L)
           library(innsight)
         }
       }, type = "message"

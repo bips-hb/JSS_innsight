@@ -39,3 +39,61 @@ get_input <- function(df, index) {
 
   list(img_data, tab_data)
 }
+
+
+save_images <- function(df, images) {
+  images <- images[[1]]
+
+  for (i in seq_len(dim(images)[1])) {
+    png(file=
+          paste0("4_Illustrations/4_2_Melanoma/figures/", df[i, ]$image_name, "_",
+                 df[i,]$benign_malignant, "_", round(df[i, ]$pred, 4),  ".png"),
+        width=480, height=480, res=300)
+    image <- images[i,,,, drop = FALSE]
+    dim(image) <- c(224,224,3)
+    image[,,1] <- image[,,1] + 0.80612123
+    image[,,2] <- image[,,2] + 0.62106454
+    image[,,3] <- image[,,3] + 0.591202
+    par(mar=c(0,0,0,0))
+    plot.new()
+    rasterImage(image, xleft = -0.04, xright = 1.04,
+                ytop = -0.04, ybottom = 1.04, interpolate = FALSE)
+    dev.off()
+  }
+}
+
+save_overlayed_images <- function(df, images, result, alpha = 0.6) {
+  images <- images[[1]]
+
+  for (i in seq_len(dim(images)[1])) {
+    png(file=paste0("4_Illustrations/4_2_Melanoma/figures/", df[i, ]$image_name,
+                    "_", df[i,]$benign_malignant, "_", round(df[i, ]$pred, 4),
+                    "_overlay.png"),
+        width=480, height=480, res=300)
+
+    # Prepare image
+    image <- images[i,,,, drop = FALSE]
+    dim(image) <- c(224,224,3)
+    image[,,1] <- image[,,1] + 0.80612123
+    image[,,2] <- image[,,2] + 0.62106454
+    image[,,3] <- image[,,3] + 0.591202
+
+    # Prepare mask
+    res <- apply(result$result[[1]][[1]][i,,,], c(1,2), sum)
+    res <- res / max(abs(res))
+    res_array <- array(0, dim = c(224,224,3))
+    res_array[,,1] <- res * (res >= 0)
+    res_array[,,3] <- abs(res * (res <= 0))
+
+    # Create and save plot
+    par(mar=c(0,0,0,0))
+    plot.new()
+    rasterImage(res_array * alpha + (1 - alpha) * image, xleft = -0.04,
+                xright = 1.04, ytop = -0.04, ybottom = 1.04,
+                interpolate = FALSE)
+    dev.off()
+  }
+}
+
+
+
