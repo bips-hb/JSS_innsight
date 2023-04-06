@@ -1,5 +1,4 @@
 library(innsight)
-keras::use_condaenv("JSS_paper")
 library(keras)
 library(reticulate)
 
@@ -45,15 +44,14 @@ converter <- Converter$new(keras_model, input_names = input_names,
 ###############################################################################
 source("4_Illustrations/4_2_Melanoma/utils.R")
 
-test_df <- tidyr::drop_na(read.csv(FILE_TEST_CSV))
-
-image_names <- c("ISIC_6535558", "ISIC_7291021", "ISIC_0946787")
-test_df <- test_df[test_df$image_name %in% image_names,]
-
+# includes the data instances "ISIC_6535558", "ISIC_7291021" and "ISIC_0946787"
+test_df <- readRDS("4_Illustrations/4_2_Melanoma/test_df.rds")
 # Get inputs
 inputs <- get_input(test_df, seq_len(nrow(test_df)))
 # Calculate predictions
 test_df$pred <- predict(keras_model, inputs)
+
+print(test_df)
 
 ###############################################################################
 #                               Apply method
