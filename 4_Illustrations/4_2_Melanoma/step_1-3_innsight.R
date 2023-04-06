@@ -1,8 +1,11 @@
 library(innsight)
+keras::use_condaenv("JSS_paper")
 library(keras)
 library(reticulate)
-keras::use_condaenv("JSS_paper")
+
 set.seed(42)
+
+Sys.setenv("CUDA_VISIBLE_DEVICES" = -1)
 
 ###############################################################################
 #                            Global attributes
@@ -38,36 +41,19 @@ converter <- Converter$new(keras_model, input_names = input_names,
                            output_names = output_name)
 
 ###############################################################################
-#                       Calculate predictions
-###############################################################################
-test_df <- tidyr::drop_na(read.csv(FILE_TEST_CSV))
-
-py_utils <- import_from_path("utils_py", here::here("4_Illustrations/4_2_Melanoma/"))
-preds <- c(py_utils$get_predictions(model_path, 256, FILE_TEST_CSV))
-test_df$pred <- preds
-
-# get indices for the 5 highest and worst true malign
-malign_df <- test_df[test_df$target == 1, ]
-best_malign_df <- malign_df[order(malign_df$pred, decreasing = TRUE), ][1:5, ]
-# get indices for the 5 highest true benign
-benign_df <- test_df[test_df$target == 0, ]
-best_benign_df <- benign_df[order(benign_df$pred, decreasing = FALSE), ][1:5, ]
-# get indices for 20 random with prob ~0.5
-df <- test_df[test_df$pred > 0.4 & test_df$pred < 0.6, ]
-df <- rbind(df[df$target == 1, ][1:25, ], df[df$target == 0, ][1:25, ])
-
-test_df <- rbind(best_malign_df, best_benign_df, df)
-saveRDS(test_df, "4_Illustrations/4_2_Melanoma/figures/test_df.rds")
-
-
-###############################################################################
 #                           Load test instance
 ###############################################################################
 source("4_Illustrations/4_2_Melanoma/utils.R")
 
+test_df <- tidyr::drop_na(read.csv(FILE_TEST_CSV))
+
+image_names <- c("ISIC_6535558", "ISIC_7291021", "ISIC_0946787")
+test_df <- test_df[test_df$image_name %in% image_names,]
+
 # Get inputs
-test_idx <- rownames(test_df)
-inputs <- get_input(test_df, test_idx)
+inputs <- get_input(test_df, seq_len(nrow(test_df)))
+# Calculate predictions
+test_df$pred <- predict(keras_model, inputs)
 
 ###############################################################################
 #                               Apply method
@@ -80,7 +66,7 @@ rule_name <- list(
 
 rule_param <- list(
   Conv2D_Layer = 1.5,
-  Dense_Layer = 0.001
+  Dense_Layer = 0.01
 )
 
 res <- LRP$new(converter, inputs, channels_first = FALSE,
@@ -92,26 +78,26 @@ res <- LRP$new(converter, inputs, channels_first = FALSE,
 ###############################################################################
 library(ggplot2)
 
-p <- plot(res, data_idx = c(1, 12)) + theme_bw()
-ggsave(filename="4_Illustrations/4_2_Melanoma/figures/plot_result_1.pdf", plot=plot(p),
-       width = 30, height = 17, units = "cm")
-p[1,1] <- p[1,1, restyle = FALSE] +
+p <- plot(res, data_idx = c(2,3,1)) +
+  theme_bw()
+
+p[1, 1] <- p[1, 1, restyle = FALSE] +
   facet_grid(cols = vars(model_input),
              labeller = as_labeller(c(Input_1 = "Image input")))
-p[1,2] <- p[1,2, restyle = FALSE] +
+p[1, 2] <- p[1, 2, restyle = FALSE] +
   facet_grid(rows = vars(data), cols = vars(model_input),
-             labeller = as_labeller(c(data_1 = "ISIC_0911264 (99.85%)",
+             labeller = as_labeller(c(data_2 = "ISIC_6535558 (87.82%)",
                                       Input_2 = "Tabular input")))
-p[2,2] <- p[2,2, restyle = FALSE] +
-  theme(axis.text.x = element_text(angle = 45, vjust = 0.6)) +
+p[2:3, 2] <- p[2:3, 2, restyle = FALSE] +
   facet_grid(rows = vars(data),
-             labeller = as_labeller(c(data_12 = "ISIC_0572205 (51.76%)")))
+             labeller = as_labeller(c(data_3 = "ISIC_7291021 (0.05%)",
+                                      data_1 = "ISIC_0946787 (47.47%)"))) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.6))
 
-ggsave(filename="4_Illustrations/4_2_Melanoma/figures/plot_result_2.pdf", plot=plot(p),
-       width = 30, height = 17, units = "cm")
+p <- plot(p, heights = c(0.31, 0.31, 0.38))
+
+ggsave(filename="4_Illustrations/4_2_Melanoma/figures/plot_result_2.pdf", plot=p,
+       width = 30, height = 19, units = "cm")
 
 # Save images
 save_images(test_df, inputs)
-
-# Save overlayed images
-save_overlayed_images(test_df, inputs, res)

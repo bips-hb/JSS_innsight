@@ -68,11 +68,13 @@ def get_2D_model(shape, name, save = True, act = "relu", bias = True,
   for i in range(depth):
     if i == depth - 1:
       kernel_size = [4, 4]
+      strides = (int((shape[1] - 4) / 6), int((shape[2] - 4) / 6))
       padding = 0
     else:
       kernel_size = [3,3]
+      strides = 1
       padding = 1
-    model.add_module("layer_" + str(i+1), nn.Conv2d(num_channels, width, kernel_size, bias = bias, padding = padding))
+    model.add_module("layer_" + str(i+1), nn.Conv2d(num_channels, width, kernel_size, bias = bias, padding = padding, stride = strides))
     num_channels = width
     
     # add batchnorm layer

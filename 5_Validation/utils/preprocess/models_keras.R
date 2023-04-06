@@ -66,7 +66,7 @@ get_2D_model <- function(shape, name, save = TRUE, act_name = "relu",
   model <- keras_model_sequential(input_shape = shape)
 
   for (i in seq_len(depth)) {
-    strides <- if (pooling == "none" & i == depth) c(2L, 2L) else c(1L, 1L)
+    strides <- if (pooling == "none" & i == depth) as.integer((shape[1:2] - 4) / 6) else c(1L, 1L)
     padding <- if (i == depth) "valid" else "same"
     model %>%
       layer_conv_2d(filters = width,

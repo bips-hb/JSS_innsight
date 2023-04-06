@@ -1,11 +1,65 @@
 import tensorflow as tf
 import numpy as np
+import keras
 import pandas as pd
 from tqdm import tqdm
 import os
 import math
 
 CHANNEL_MEANS = np.array((0.80612123, 0.62106454, 0.591202)).reshape((1,1,3))
+
+
+def get_base_model(img_shape):
+  
+  # Define the model
+  image_input = keras.Input(shape = img_shape)
+  
+  block1_in = keras.layers.Conv2D(32, (3,3), padding = "same", activation = "relu")(image_input)
+  img = keras.layers.Conv2D(32, (3,3), padding = "same", activation = "relu")(block1_in)
+  img = keras.layers.Conv2D(32, (3,3), padding = "same", activation = "relu")(img)
+  block1_in = keras.layers.Add()([block1_in, img])
+  img = keras.layers.Conv2D(32, (3,3), padding = "same", activation = "relu")(block1_in)
+  img = keras.layers.Conv2D(32, (3,3), padding = "same", activation = "relu")(img)
+  img = keras.layers.Add()([block1_in, img])
+  img = keras.layers.AvgPool2D((3,3))(img)
+  
+  block2_in = keras.layers.Conv2D(64, (3,3), padding = "same", activation = "relu")(img)
+  img = keras.layers.Conv2D(64, (3,3), padding = "same", activation = "relu")(block2_in)
+  img = keras.layers.Conv2D(64, (3,3), padding = "same", activation = "relu")(img)
+  block2_in = keras.layers.Add()([block2_in, img])
+  img = keras.layers.Conv2D(64, (3,3), padding = "same", activation = "relu")(block2_in)
+  img = keras.layers.Conv2D(64, (3,3), padding = "same", activation = "relu")(img)
+  img = keras.layers.Add()([block2_in, img])
+  img = keras.layers.AvgPool2D((3,3))(img)
+  
+  block3_in = keras.layers.Conv2D(128, (3,3), padding = "same", activation = "relu")(img)
+  img = keras.layers.Conv2D(128, (3,3), padding = "same", activation = "relu")(block3_in)
+  img = keras.layers.Conv2D(128, (3,3), padding = "same", activation = "relu")(img)
+  block3_in = keras.layers.Add()([block3_in, img])
+  img = keras.layers.Conv2D(128, (3,3), padding = "same", activation = "relu")(block3_in)
+  img = keras.layers.Conv2D(128, (3,3), padding = "same", activation = "relu")(img)
+  img = keras.layers.Add()([block3_in, img])
+  img = keras.layers.AvgPool2D((3,3))(img)
+  
+  block4_in = keras.layers.Conv2D(256, (3,3), padding = "same", activation = "relu")(img)
+  img = keras.layers.Conv2D(128, (3,3), padding = "same", activation = "relu")(block4_in)
+  img = keras.layers.Conv2D(256, (3,3), padding = "same", activation = "relu")(img)
+  block4_in = keras.layers.Add()([block4_in, img])
+  img = keras.layers.Conv2D(128, (3,3), padding = "same", activation = "relu")(block4_in)
+  img = keras.layers.Conv2D(256, (3,3), padding = "same", activation = "relu")(img)
+  img = keras.layers.Add()([block4_in, img])
+  img = keras.layers.AvgPool2D((3,3))(img)
+  
+  out = keras.layers.Flatten()(img)
+  out = keras.layers.Dense(512, activation = 'relu', name = "base_model_1")(out)
+  out = keras.layers.Dropout(0.3, name = "base_model_2")(out)
+  out = keras.layers.Dense(256, activation = 'linear', name = "base_model_end")(out)
+  out = keras.layers.Dropout(0.3)(out)
+  out = keras.layers.Dense(1, activation = 'sigmoid')(out)
+  
+  model = keras.Model(inputs = image_input, outputs = out)
+  
+  return model
 
 def get_image(img_path, size):
   image = tf.keras.preprocessing.image.load_img(img_path)
@@ -57,14 +111,17 @@ class CustomDataGen(tf.keras.utils.Sequence):
                  has_target=True,
                  augment = True,
                  input_size=(32, 32, 3),
-                 shuffle=True):
+                 shuffle=True,
+                 omit_tab_data=False):
         
         self.df = encode_df(df.copy(), img_source)
         self.batch_size = batch_size
         self.input_size = input_size
         self.augment = augment
         self.shuffle = shuffle
+        self.omit_tab_data = omit_tab_data
         self.n = len(self.df)
+        self.crop_size = [int(input_size[0] * 1.2), int(input_size[1] * 1.2)]
     
     def on_epoch_end(self):
         if self.shuffle:
@@ -75,13 +132,20 @@ class CustomDataGen(tf.keras.utils.Sequence):
         if self.augment:
           image_batch = tf.image.random_flip_left_right(image_batch)
           image_batch = tf.image.random_flip_up_down(image_batch)
-          image_batch = tf.image.random_brightness(image_batch, 0.2)
-          image_batch = tf.image.random_contrast(image_batch, lower = 0.8, upper = 1.2)
+          image_batch = tf.image.resize(image_batch, self.crop_size, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+          image_batch = tf.image.random_crop(image_batch, (image_batch.shape[0],) + self.input_size)
+          image_batch = tf.image.random_brightness(image_batch, 0.1)
+          image_batch = tf.image.random_contrast(image_batch, lower = 0.9, upper = 1.1)
           image_batch = tf.image.random_hue(image_batch, 0.1)
-        tab_batch = batches.iloc[:, 1:11].to_numpy()
+          
         y_batch = batches['target'].to_numpy()
-
-        return [image_batch, tab_batch], y_batch
+        
+        if self.omit_tab_data:
+          return image_batch, y_batch
+        else:
+          tab_batch = batches.iloc[:, 1:11].to_numpy()
+          
+          return [image_batch, tab_batch], y_batch
     
     def __getitem__(self, index):
         start = index * self.batch_size
@@ -96,6 +160,19 @@ class CustomDataGen(tf.keras.utils.Sequence):
 
 
 def get_predictions(model_path, batch_size, data_csv_path, image_shape = (224, 224, 3)):
+  import tensorflow as tf
+  # Use second GPU
+  gpus = tf.config.experimental.list_physical_devices('GPU')
+  if gpus:
+    # Restrict TensorFlow to only use the first GPU
+    try:
+      tf.config.experimental.set_visible_devices(gpus[1], 'GPU')
+    except RuntimeError as e:
+      # Visible devices must be set at program startup
+      print(e)
+      
+  print(tf.config.experimental.get_visible_devices('GPU'))
+      
   # Load data csv
   data_csv = drop_nan(pd.read_csv(data_csv_path))
   # Create data generator

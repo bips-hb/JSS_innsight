@@ -2,7 +2,7 @@
 ###############################################################################
 #                           zennit: Gradient
 ###############################################################################
-def apply_Gradient(model, inputs, func_args = None, num_outputs = int(1)):
+def apply_Gradient(model, inputs, func_args = None, num_outputs = int(1), n_cpu = int(1)):
   import torch
   import torch.nn as nn
   import numpy as np
@@ -48,7 +48,7 @@ def apply_Gradient(model, inputs, func_args = None, num_outputs = int(1)):
 #                           zennit: SmoothGrad
 ###############################################################################
 
-def apply_SmoothGrad(model, inputs, func_args = None, num_outputs = int(1)):
+def apply_SmoothGrad(model, inputs, func_args = None, num_outputs = int(1), n_cpu = int(1)):
   import torch
   import torch.nn as nn
   import numpy as np
@@ -91,7 +91,7 @@ def apply_SmoothGrad(model, inputs, func_args = None, num_outputs = int(1)):
 ###############################################################################
 #                           zennit: LRP
 ###############################################################################
-def apply_LRP(model, inputs, func_args = None, num_outputs = int(1)):
+def apply_LRP(model, inputs, func_args = None, num_outputs = int(1), n_cpu = int(1)):
   import torch
   import torch.nn as nn
   import numpy as np

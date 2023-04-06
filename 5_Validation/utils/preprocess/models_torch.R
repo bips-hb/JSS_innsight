@@ -54,13 +54,16 @@ get_2D_model <- function(shape, act = "relu", bias = TRUE, pooling = "none",
   for (i in seq_len(depth)) {
     if (i == depth) {
       kernel_size <- c(4,4)
+      strides <- as.integer((shape[2:3] - 4) / 6)
       padding <- 0
     } else {
       kernel_size <- c(3,3)
       padding <- 1
+      strides <- c(1,1)
     }
-    model$add_module(paste0("layer_", i), nn_conv2d(num_channels, width,
-                                                    kernel_size, padding = padding))
+    model$add_module(paste0("layer_", i), nn_conv2d(num_channels, width, bias = bias,
+                                                    kernel_size, padding = padding,
+                                                    stride = strides))
     num_channels <- width
 
     if (bn == "none") {

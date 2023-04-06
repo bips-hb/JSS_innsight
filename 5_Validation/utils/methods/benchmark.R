@@ -31,7 +31,7 @@ LRP_RULE_SPEC <- list(
     rule_param = c(0))
 )
 
-benchmark <- function(methods, model_config, show = FALSE, src_dir = "tmp") {
+benchmark <- function(methods, model_config, show = FALSE, src_dir = "tmp", n_cpu = 1) {
   library(callr)
   library(cli)
 
@@ -48,14 +48,14 @@ benchmark <- function(methods, model_config, show = FALSE, src_dir = "tmp") {
     apply_benchmark,
     args = list(pkg = "innsight_torch", methods = methods, ref_pkg = "zennit",
                 model_config = model_config[model_config$api == "torch", ],
-                rule_spec = LRP_RULE_SPEC$zennit, src_dir = src_dir),
+                rule_spec = LRP_RULE_SPEC$zennit, src_dir = src_dir, n_cpu = n_cpu),
     show = show, spinner = FALSE)
   cli_progress_step("Calculating {.pkg zennit}")
   res_zennit <- r(
     apply_benchmark,
     args = list(pkg = "zennit", methods = methods, ref_pkg = "innsight_torch",
                 model_config = model_config[model_config$api == "torch", ],
-                src_dir = src_dir),
+                src_dir = src_dir, n_cpu = n_cpu),
     show = show, spinner = FALSE)
 
   # Benchmark innsight vs captum ----------------------------------------------
@@ -65,14 +65,14 @@ benchmark <- function(methods, model_config, show = FALSE, src_dir = "tmp") {
     apply_benchmark,
     args = list(pkg = "innsight_torch", methods = methods, ref_pkg = "captum",
                 model_config = model_config[model_config$api == "torch", ],
-                rule_spec = LRP_RULE_SPEC$captum, src_dir = src_dir),
+                rule_spec = LRP_RULE_SPEC$captum, src_dir = src_dir, n_cpu = n_cpu),
     show = show, spinner = FALSE)
   cli_progress_step("Calculating {.pkg captum}")
   res_captum <- r(
     apply_benchmark,
     args = list(pkg = "captum", methods = methods, ref_pkg = "innsight_torch",
                 model_config = model_config[model_config$api == "torch", ],
-                src_dir = src_dir),
+                src_dir = src_dir, n_cpu = n_cpu),
     show = show, spinner = FALSE)
 
   # Benchmark innsight vs innvestigate -----------------------------------------
@@ -83,14 +83,14 @@ benchmark <- function(methods, model_config, show = FALSE, src_dir = "tmp") {
     args = list(pkg = "innsight_keras", methods = methods, ref_pkg = "innvestigate",
                 model_config = model_config[model_config$api == "keras", ],
                 rule_spec = LRP_RULE_SPEC$innvestigate,
-                src_dir = src_dir),
+                src_dir = src_dir, n_cpu = n_cpu),
     show = show, spinner = FALSE)
   cli_progress_step("Calculating {.pkg innvestigate}")
   res_innvestigate <- r(
     apply_benchmark,
     args = list(pkg = "innvestigate", methods = methods, ref_pkg = "innsight_keras",
                 model_config = model_config[model_config$api == "keras", ],
-                src_dir = src_dir),
+                src_dir = src_dir, n_cpu = n_cpu),
     show = show, spinner = FALSE)
 
   # Benchmark innsight vs deeplift -----------------------------------------
@@ -100,14 +100,14 @@ benchmark <- function(methods, model_config, show = FALSE, src_dir = "tmp") {
     apply_benchmark,
     args = list(pkg = "innsight_keras", methods = methods, ref_pkg = "deeplift",
                 model_config = model_config[model_config$api == "keras", ],
-                rule_spec = LRP_RULE_SPEC$deeplift, src_dir = src_dir),
+                rule_spec = LRP_RULE_SPEC$deeplift, src_dir = src_dir, n_cpu = n_cpu),
     show = show, spinner = FALSE)
   cli_progress_step("Calculating {.pkg deeplift}")
   res_deeplift <- r(
     apply_benchmark,
     args = list(pkg = "deeplift", methods = methods, ref_pkg = "innsight_keras",
                 model_config = model_config[model_config$api == "keras", ],
-                src_dir = src_dir),
+                src_dir = src_dir, n_cpu = n_cpu),
     show = show, spinner = FALSE)
   cli_progress_cleanup()
 
@@ -131,7 +131,7 @@ benchmark <- function(methods, model_config, show = FALSE, src_dir = "tmp") {
 }
 
 apply_benchmark <- function(pkg, methods, model_config, ref_pkg,
-                            rule_spec = NULL, src_dir = "models") {
+                            rule_spec = NULL, src_dir = "models", n_cpu = 1) {
   library(data.table)
   library(cli)
   set.seed(42)
@@ -144,7 +144,7 @@ apply_benchmark <- function(pkg, methods, model_config, ref_pkg,
   source("5_Validation/utils/methods/benchmark.R")
 
   # Load conda environments
-  load_conda_envs(pkg)
+  load_conda_envs(pkg, n_cpu)
 
   for (method in methods) {
     # deparse method argument
@@ -233,7 +233,7 @@ apply_benchmark <- function(pkg, methods, model_config, ref_pkg,
         tryCatch(
           expr = {
             reticulate::py_capture_output(
-              res <- func(model, inputs, func_args, config_i$num_outputs),
+              res <- func(model, inputs, func_args, config_i$num_outputs, n_cpu),
               type = "stdout")
           },
           error = function(e){
@@ -506,7 +506,7 @@ combine_results <- function(df1, df2) {
 }
 
 
-load_conda_envs <- function(pkg) {
+load_conda_envs <- function(pkg, n_cpu = 1) {
   capture.output(
     capture.output(
       {
@@ -514,8 +514,8 @@ load_conda_envs <- function(pkg) {
         if (pkg %in% c("zennit", "captum")) {
           reticulate::use_condaenv("JSS_innsight_pytorch")
           import_torch <- reticulate::import("torch")
-          import_torch$set_num_threads(1L)
-          import_torch$set_num_interop_threads(1L)
+          import_torch$set_num_threads(as.integer(n_cpu))
+          import_torch$set_num_interop_threads(as.integer(n_cpu))
         } else if (pkg == "deeplift") {
           Sys.setenv("RETICULATE_PYTHON" = reticulate::conda_python("JSS_innsight_tf_1"))
           reticulate::use_condaenv("JSS_innsight_tf_1")
@@ -533,13 +533,13 @@ load_conda_envs <- function(pkg) {
             library(keras)
           })
           library(torch)
-          torch_set_num_threads(1L)
-          torch_set_num_interop_threads(1L)
+          torch_set_num_threads(as.integer(n_cpu))
+          torch_set_num_interop_threads(as.integer(n_cpu))
           library(innsight)
         } else {
           library(torch)
-          torch_set_num_threads(1L)
-          torch_set_num_interop_threads(1L)
+          torch_set_num_threads(as.integer(n_cpu))
+          torch_set_num_interop_threads(as.integer(n_cpu))
           library(innsight)
         }
       }, type = "message"

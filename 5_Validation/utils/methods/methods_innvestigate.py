@@ -3,7 +3,7 @@
 #                       innvestigate: Gradient
 ###############################################################################
 
-def apply_Gradient(model_path, inputs, func_args = None, num_outputs = int(1)):
+def apply_Gradient(model_path, inputs, func_args = None, num_outputs = int(1), n_cpu = int(1)):
 
   # Load required packages
   import tensorflow as tf
@@ -15,8 +15,8 @@ def apply_Gradient(model_path, inputs, func_args = None, num_outputs = int(1)):
   
   tf.compat.v1.disable_eager_execution()
   k.backend.clear_session()
-  config = tf.compat.v1.ConfigProto(intra_op_parallelism_threads = int(1),
-                                     inter_op_parallelism_threads = int(1))
+  config = tf.compat.v1.ConfigProto(intra_op_parallelism_threads = int(n_cpu),
+                                     inter_op_parallelism_threads = int(n_cpu))
   session = tf.compat.v1.Session(config=config)
   tf.compat.v1.keras.backend.set_session(session)
 
@@ -51,7 +51,7 @@ def apply_Gradient(model_path, inputs, func_args = None, num_outputs = int(1)):
 ###############################################################################
 #                       innvestigate: SmoothGrad
 ###############################################################################
-def apply_SmoothGrad(model_path, inputs, func_args = None, num_outputs = int(1)):
+def apply_SmoothGrad(model_path, inputs, func_args = None, num_outputs = int(1), n_cpu = int(1)):
   # Load required packages
   import tensorflow as tf
   import keras as k
@@ -62,8 +62,8 @@ def apply_SmoothGrad(model_path, inputs, func_args = None, num_outputs = int(1))
   
   tf.compat.v1.disable_eager_execution()
   k.backend.clear_session()
-  config = tf.compat.v1.ConfigProto(intra_op_parallelism_threads = int(1),
-                                     inter_op_parallelism_threads = int(1))
+  config = tf.compat.v1.ConfigProto(intra_op_parallelism_threads = int(n_cpu),
+                                     inter_op_parallelism_threads = int(n_cpu))
   session = tf.compat.v1.Session(config=config)
   tf.compat.v1.keras.backend.set_session(session)
 
@@ -95,7 +95,7 @@ def apply_SmoothGrad(model_path, inputs, func_args = None, num_outputs = int(1))
 ###############################################################################
 #                       innvestigate: LRP
 ###############################################################################
-def apply_LRP(model_path, inputs, func_args = None, num_outputs = int(1)):
+def apply_LRP(model_path, inputs, func_args = None, num_outputs = int(1), n_cpu = int(1)):
   # Load required packages
   import tensorflow as tf
   import keras as k
@@ -106,8 +106,8 @@ def apply_LRP(model_path, inputs, func_args = None, num_outputs = int(1)):
   
   tf.compat.v1.disable_eager_execution()
   k.backend.clear_session()
-  config = tf.compat.v1.ConfigProto(intra_op_parallelism_threads = int(1),
-                                     inter_op_parallelism_threads = int(1))
+  config = tf.compat.v1.ConfigProto(intra_op_parallelism_threads = int(n_cpu),
+                                     inter_op_parallelism_threads = int(n_cpu))
   session = tf.compat.v1.Session(config=config)
   tf.compat.v1.keras.backend.set_session(session)
 

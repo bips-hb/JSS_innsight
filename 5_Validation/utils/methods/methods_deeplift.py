@@ -1,7 +1,7 @@
 ###############################################################################
 #                       Deeplift: Gradient
 ###############################################################################
-def apply_Gradient(model_path, inputs, func_args = None, num_outputs = int(1)):
+def apply_Gradient(model_path, inputs, func_args = None, num_outputs = int(1), n_cpu = int(1)):
   # Load required packages
   import tensorflow as tf
   import keras
@@ -18,8 +18,8 @@ def apply_Gradient(model_path, inputs, func_args = None, num_outputs = int(1)):
   
   tf.compat.v1.disable_eager_execution()
   keras.backend.clear_session()
-  config = tf.ConfigProto(intra_op_parallelism_threads = int(1),
-                          inter_op_parallelism_threads = int(1))
+  config = tf.ConfigProto(intra_op_parallelism_threads = int(n_cpu),
+                          inter_op_parallelism_threads = int(n_cpu))
   session = tf.Session(config=config)
   tf.keras.backend.set_session(session)
   
@@ -61,7 +61,7 @@ def apply_Gradient(model_path, inputs, func_args = None, num_outputs = int(1)):
 ###############################################################################
 #                       Deeplift: DeepLift
 ###############################################################################
-def apply_DeepLift(model_path, inputs, func_args = None, num_outputs = int(1)):
+def apply_DeepLift(model_path, inputs, func_args = None, num_outputs = int(1), n_cpu = int(1)):
   # Load required packages
   import keras
   from keras import backend as K
@@ -77,8 +77,8 @@ def apply_DeepLift(model_path, inputs, func_args = None, num_outputs = int(1)):
   
   tf.compat.v1.disable_eager_execution()
   keras.backend.clear_session()
-  config = tf.ConfigProto(intra_op_parallelism_threads = int(1),
-                          inter_op_parallelism_threads = int(1))
+  config = tf.ConfigProto(intra_op_parallelism_threads = int(n_cpu),
+                          inter_op_parallelism_threads = int(n_cpu))
   session = tf.Session(config=config)
   tf.keras.backend.set_session(session)
   start_time = time.time()

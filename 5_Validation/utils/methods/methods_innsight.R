@@ -2,7 +2,7 @@
 ###############################################################################
 #                       innsight: Gradient
 ###############################################################################
-apply_Gradient <- function(model, inputs, func_args = NULL, num_outputs = NULL) {
+apply_Gradient <- function(model, inputs, func_args = NULL, num_outputs = NULL, n_cpu = NULL) {
   library(torch)
 
   if (torch::is_nn_module(model)) {
@@ -30,7 +30,7 @@ apply_Gradient <- function(model, inputs, func_args = NULL, num_outputs = NULL) 
 ###############################################################################
 #                       innsight: SmoothGrad
 ###############################################################################
-apply_SmoothGrad <- function(model, inputs, func_args = NULL, num_outputs = NULL) {
+apply_SmoothGrad <- function(model, inputs, func_args = NULL, num_outputs = NULL, n_cpu = NULL) {
   library(torch)
 
   if (torch::is_nn_module(model)) {
@@ -59,7 +59,7 @@ apply_SmoothGrad <- function(model, inputs, func_args = NULL, num_outputs = NULL
 ###############################################################################
 #                       innsight: LRP
 ###############################################################################
-apply_LRP <- function(model, inputs, func_args = NULL, num_outputs = NULL) {
+apply_LRP <- function(model, inputs, func_args = NULL, num_outputs = NULL, n_cpu = NULL) {
   library(torch)
 
   if (torch::is_nn_module(model)) {
@@ -90,7 +90,7 @@ apply_LRP <- function(model, inputs, func_args = NULL, num_outputs = NULL) {
 #                       innsight: DeepLift
 ###############################################################################
 
-apply_DeepLift <- function(model, inputs, func_args = NULL, num_outputs = NULL) {
+apply_DeepLift <- function(model, inputs, func_args = NULL, num_outputs = NULL, n_cpu = NULL) {
   library(torch)
 
   if (torch::is_nn_module(model)) {

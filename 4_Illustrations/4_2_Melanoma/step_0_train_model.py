@@ -10,7 +10,7 @@ import os
 from tqdm import tqdm
 import sys
 
-from utils_py import preapare_images, CustomDataGen, drop_nan
+from utils_py import preapare_images, CustomDataGen, drop_nan, get_base_model
 
 # For reproducibility 
 tf.keras.backend.clear_session()
@@ -34,7 +34,7 @@ print(tf.config.experimental.get_visible_devices('GPU'))
 ###############################################################################
 EPOCHS = 400
 BATCH_SIZE = 256
-VAL_SPLIT = 0.15
+VAL_SPLIT = 0.2
 IMAGE_SHAPE = (224,224,3)
 DO_PREPROCESSING = False # is very time consuming
 
@@ -58,11 +58,76 @@ if DO_PREPROCESSING:
   print("Preprocess test images...")
   preapare_images(dir_test_images, '/data/test/', IMAGE_SHAPE[0:2])
   
+val_samples = np.random.choice(len(train_csv), int(VAL_SPLIT * len(train_csv)))
+train_samples = np.setdiff1d(range(len(train_csv)), val_samples)
+
+###############################################################################
+#                  Warm up: Training without tabular data
+###############################################################################
+
+# Train data generator for the base model
+train_data_gen = CustomDataGen(
+  df = train_csv.iloc[train_samples, :], 
+  batch_size = BATCH_SIZE,
+  augment = True,
+  shuffle = True,
+  omit_tab_data = True,
+  img_source = os.getcwd() + '/data/train/', 
+  input_size = IMAGE_SHAPE)
+  
+# Valid data generator for the base model
+val_data_gen = CustomDataGen(
+  df = train_csv.iloc[val_samples, :], 
+  batch_size = BATCH_SIZE,
+  augment = False,
+  shuffle = False,
+  omit_tab_data = True,
+  img_source = os.getcwd() + '/data/train/', 
+  input_size = IMAGE_SHAPE)
+
+# The dataset is highly unbalanced
+class_weights = {
+  0: len(train_samples) / (2 * sum(train_data_gen.df.target == 0)),
+  1: len(train_samples) / (2 * sum(train_data_gen.df.target == 1))
+}
+
+# get base model
+base_model = get_base_model(IMAGE_SHAPE)
+base_model.compile(
+  optimizer = keras.optimizers.SGD(learning_rate = 1e-2, momentum = 0.9),
+  loss = "binary_crossentropy",
+  metrics = [keras.metrics.AUC(name = "auc"), "accuracy"]
+)
+
+print(base_model.summary())
+
+callbacks = [
+  tf.keras.callbacks.ReduceLROnPlateau(
+    verbose = 1,
+    monitor = "val_auc", factor = 0.1, patience = 30, 
+    min_lr = 1e-6, mode = "max"),
+  tf.keras.callbacks.EarlyStopping(
+    verbose = 1,
+    patience = 60, restore_best_weights = True,
+    monitor = "val_auc", mode = "max")
+]
+
+# Train the model
+base_model.fit(
+  x = train_data_gen,
+  validation_data = val_data_gen,
+  class_weight = class_weights,
+  callbacks = callbacks,
+  verbose = 1,
+  epochs = 300
+)
+
+#  Save the base model
+base_model.save('checkpoints/base_model_' + str(IMAGE_SHAPE[0]) + '_' + str(IMAGE_SHAPE[1]))
+
 ###############################################################################
 #               Create train and val split and Data Generators
 ###############################################################################
-val_samples = np.random.choice(len(train_csv), int(VAL_SPLIT * len(train_csv)))
-train_samples = np.setdiff1d(range(len(train_csv)), val_samples)
 
 # Train data generator
 train_data_gen = CustomDataGen(
@@ -70,6 +135,7 @@ train_data_gen = CustomDataGen(
   batch_size = BATCH_SIZE,
   augment = True,
   shuffle = True,
+  omit_tab_data = False,
   img_source = os.getcwd() + '/data/train/', 
   input_size = IMAGE_SHAPE)
 
@@ -79,135 +145,64 @@ val_data_gen = CustomDataGen(
   batch_size = BATCH_SIZE,
   augment = False,
   shuffle = False,
+  omit_tab_data = False,
   img_source = os.getcwd() + '/data/train/', 
   input_size = IMAGE_SHAPE)
-  
-print("Number of Training Images = ", train_data_gen.n, " (", sum(train_data_gen.df.target == 1), ")")
-print("Number of Validation Images = ", val_data_gen.n, " (", sum(val_data_gen.df.target == 1), ")")
 
 ###############################################################################
-#                             Define Model
+#             Combine base model with the tabular model
 ###############################################################################
+
+base_model = tf.keras.models.load_model('checkpoints/base_model_' + str(IMAGE_SHAPE[0]) + '_' + str(IMAGE_SHAPE[1]))
+
+# Get relevant inputs and oputputs of the base model
+image_input = base_model.input
+base_model_out = base_model.get_layer("base_model_end").output
+
 # Define bias for last layer
 bias = np.log(sum(train_data_gen.df.target == 1) / sum(train_data_gen.df.target == 0))
 bias = keras.initializers.Constant(bias)
 
-image_input = keras.Input(shape = IMAGE_SHAPE)
-tabular_input = keras.Input(shape = 10)
-
-block1_in = keras.layers.Conv2D(16, (6,6), padding = "same", activation = "relu", use_bias = False)(image_input)
-img = keras.layers.Conv2D(16, (6,6), padding = "same", activation = "relu")(block1_in)
-img = keras.layers.Conv2D(16, (6,6), padding = "same", activation = "relu")(img)
-block1_in = keras.layers.Add()([block1_in, img])
-img = keras.layers.Conv2D(16, (6,6), padding = "same", activation = "relu")(block1_in)
-img = keras.layers.Conv2D(16, (6,6), padding = "same", activation = "relu")(img)
-img = keras.layers.Add()([block1_in, img])
-img = keras.layers.AvgPool2D((3,3))(img)
-
-block2_in = keras.layers.Conv2D(32, (3,3), padding = "same", activation = "relu", use_bias = False)(img)
-img = keras.layers.Conv2D(32, (3,3), padding = "same", activation = "relu")(block2_in)
-img = keras.layers.Conv2D(32, (3,3), padding = "same", activation = "relu")(img)
-block2_in = keras.layers.Add()([block2_in, img])
-img = keras.layers.Conv2D(32, (3,3), padding = "same", activation = "relu")(block2_in)
-img = keras.layers.Conv2D(32, (3,3), padding = "same", activation = "relu")(img)
-img = keras.layers.Add()([block2_in, img])
-img = keras.layers.AvgPool2D((3,3))(img)
-
-block3_in = keras.layers.Conv2D(64, (3,3), padding = "same", activation = "relu", use_bias = False)(img)
-img = keras.layers.Conv2D(64, (3,3), padding = "same", activation = "relu")(block3_in)
-img = keras.layers.Conv2D(64, (3,3), padding = "same", activation = "relu")(img)
-block3_in = keras.layers.Add()([block3_in, img])
-img = keras.layers.Conv2D(64, (3,3), padding = "same", activation = "relu")(block3_in)
-img = keras.layers.Conv2D(64, (3,3), padding = "same", activation = "relu")(img)
-img = keras.layers.Add()([block3_in, img])
-img = keras.layers.AvgPool2D((3,3))(img)
-
-block4_in = keras.layers.Conv2D(128, (3,3), padding = "same", activation = "relu", use_bias = False)(img)
-img = keras.layers.Conv2D(128, (3,3), padding = "same", activation = "relu")(block4_in)
-img = keras.layers.Conv2D(128, (3,3), padding = "same", activation = "relu")(img)
-block4_in = keras.layers.Add()([block4_in, img])
-img = keras.layers.Conv2D(128, (3,3), padding = "same", activation = "relu")(block4_in)
-img = keras.layers.Conv2D(128, (3,3), padding = "same", activation = "relu")(img)
-img = keras.layers.Add()([block4_in, img])
-img = keras.layers.AvgPool2D((4,4))(img)
-
-out = keras.layers.Flatten()(img)
-out = keras.layers.Dense(256, activation = 'relu')(out)
-out = keras.layers.Dropout(0.2)(out)
-image_model_out = keras.layers.Dense(128, activation = 'linear')(out)
-
 # Tabular part
-tab = keras.layers.Dense(64, activation = 'relu', name = "tab_layer_1")(tabular_input)
-tab = keras.layers.Dropout(0.2, name = "tab_layer_2")(tab)
-tab = keras.layers.Dense(32, activation = 'linear', name = "tab_layer_3")(tab)
-tab = keras.layers.Dropout(0.2, name = "tab_layer_4")(tab)
-tab_model_out = keras.layers.Dense(16, activation = 'linear', name = "tab_layer_5")(tab)
+tabular_input = keras.Input(shape = 10, name = "input_2")
+tab = keras.layers.Dense(32, activation = 'relu')(tabular_input)
+tab = keras.layers.Dropout(0.2)(tab)
+tab = keras.layers.Dense(16, activation = 'linear')(tab)
+tab = keras.layers.Dropout(0.2)(tab)
+tab_model_out = keras.layers.Dense(8, activation = 'linear')(tab)
 
 # Combined part
-out = keras.layers.Concatenate()([image_model_out, tab_model_out])
+out = keras.layers.Concatenate()([base_model_out, tab_model_out])
 out = keras.layers.Dense(256, activation = 'relu')(out)
-out = keras.layers.Dropout(0.2)(out)
+out = keras.layers.Dropout(0.3)(out)
 out = keras.layers.Dense(1, activation = 'sigmoid', bias_initializer = bias)(out)
 
 model = keras.Model(inputs = [image_input, tabular_input], outputs = out)
-
-# Set the tabular model as non-trainable
-for layer in model.layers:
-  if layer.name.startswith("tab_layer"):
-    layer.trainable = False
-
 print(model.summary())
+
 
 ###############################################################################
 #                     Compile and train the model
 ###############################################################################
-
-# The dataset is highly unbalanced
-class_weights = {
-  0: len(train_samples) / (2 * sum(train_data_gen.df.target == 0)),
-  1: len(train_samples) / (2 * sum(train_data_gen.df.target == 1))
-}
-
-# Warm-up training for the CNN
-# Compile the model
-model.compile(
-  optimizer = keras.optimizers.Adam(learning_rate = 1e-3),
-  loss = "binary_crossentropy",
-  metrics = [keras.metrics.AUC(name = "auc"), "accuracy"]
-)
-
-# Train the model
-model.fit(
-  x = train_data_gen,
-  steps_per_epoch = len(train_samples) // BATCH_SIZE,
-  class_weight = class_weights,
-  verbose = 1,
-  epochs = 100
-)
 
 # We use the area under the ROC curve as the validation measure
 callbacks = [
   tf.keras.callbacks.ModelCheckpoint(
     filepath='checkpoints/model_' + str(IMAGE_SHAPE[0]) + '_' + str(IMAGE_SHAPE[1]),
     save_weights_only=False,
-    monitor='val_loss',
-    mode='min',
+    monitor='val_auc',
+    mode='max',
     save_best_only=True),
   tf.keras.callbacks.ReduceLROnPlateau(
-    monitor = "val_loss", factor = 0.1, patience = 20, 
-    min_lr = 1e-6, mode = "min"),
+    monitor = "val_auc", factor = 0.1, patience = 20, 
+    min_lr = 1e-6, mode = "max"),
   tf.keras.callbacks.EarlyStopping(
-    patience = 60, restore_best_weights = True,
-    monitor = "val_loss", mode = "min")
+    patience = 40, restore_best_weights = True,
+    monitor = "val_auc", mode = "max")
 ]
 
-# Set the tabular model as non-trainable
-for layer in model.layers:
-  if layer.name.startswith("tab_layer"):
-    layer.trainable = True
-
 model.compile(
-  optimizer = keras.optimizers.Adam(learning_rate = 1e-4),
+  optimizer = keras.optimizers.SGD(learning_rate = 1e-2, momentum = 0.9),
   loss = "binary_crossentropy",
   metrics = [keras.metrics.AUC(name = "auc"), "accuracy"]
 )
@@ -215,10 +210,8 @@ model.compile(
 # Train the model
 model.fit(
   x = train_data_gen,
-  steps_per_epoch = len(train_samples) // BATCH_SIZE,
   validation_data = val_data_gen,
   class_weight = class_weights,
-  validation_steps = len(val_samples) // BATCH_SIZE,
   verbose = 1,
   callbacks = callbacks,
   epochs = EPOCHS
@@ -230,7 +223,7 @@ model.fit(
 
 model = keras.models.load_model('checkpoints/model_224_224')
 model.compile(
-  optimizer = tf.keras.optimizers.Adam(learning_rate = 1e-4),
+  optimizer = tf.keras.optimizers.Adam(learning_rate = 1e-3),
   loss = "binary_crossentropy",
   metrics = [keras.metrics.AUC(name = "auc"), "accuracy"]
 )
