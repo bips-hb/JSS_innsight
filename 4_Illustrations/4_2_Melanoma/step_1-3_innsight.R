@@ -10,12 +10,11 @@ Sys.setenv("CUDA_VISIBLE_DEVICES" = -1)
 #                            Global attributes
 ###############################################################################
 
-FILE_TEST_CSV = "/opt/example-data/siim-isic-melanoma/train.csv"
 IMAGE_SHAPE <- c(224, 224, 3)
 TAB_NAMES <- c("Sex: Male", "Sex: Female", "Age",
-                   "Loc: Head/neck", "Loc: Torso", "Loc: Upper extrm.",
-                   "Loc: Lower extrem", "Loc: Palms/soles", "Loc: Oral/genital",
-                   "Loc: Missing")
+               "Loc: Head/neck", "Loc: Torso", "Loc: Upper extrm.",
+               "Loc: Lower extrem", "Loc: Palms/soles", "Loc: Oral/genital",
+               "Loc: Missing")
 
 ###############################################################################
 #                        Create 'Converter' object
