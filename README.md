@@ -89,9 +89,9 @@ This creates the images for Figure 10 from the paper and places them in
 the folder `5_Validation/5_1_Correctness/figures/`.
 
 <p float="left">
-  <img src="5_Validation/5_1_Correctness/figures/mae_gradient_based.png" width="33%" />
-  <img src="5_Validation/5_1_Correctness/figures/mae_deeplift.png" width="33%" /> 
-  <img src="5_Validation/5_1_Correctness/figures/mae_lrp.png" width="33%" />
+  <img src="5_Validation/5_1_Correctness/figures/mae_gradient_based.png" width="32%" />
+  <img src="5_Validation/5_1_Correctness/figures/mae_deeplift.png" width="32%" /> 
+  <img src="5_Validation/5_1_Correctness/figures/mae_lrp.png" width="32%" />
 </p>
 
 To start the simulation for the time measurement the following R script must 
