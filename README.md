@@ -42,7 +42,10 @@ Rscript 4_Illustrations/4_1_Palmerpenguins/4_1_Palmerpenguins.R
 
 The Figure 7 used in the paper is then saved in the folder `4_Illustrations/4_1_Palmerpenguins/`.
 
-![penguin_plot](4_Illustrations/4_1_Palmerpenguins/penguin_plot.png) ![penguin_boxplot](4_Illustrations/4_1_Palmerpenguins/penguin_boxplot.png)
+<p float="left">
+  <img src="4_Illustrations/4_1_Palmerpenguins/penguin_plot.png" width="49%" />
+  <img src="4_Illustrations/4_1_Palmerpenguins/penguin_boxplot.png" width="49%" /> 
+</p>
 
 ### 4.2. Example 2: Melanoma dataset
 
@@ -85,7 +88,11 @@ Rscript 5_Validation/5_1_Correctness/5_1_Correctness.R
 This creates the images for Figure 10 from the paper and places them in 
 the folder `5_Validation/5_1_Correctness/figures/`.
 
-![](5_Validation/5_1_Correctness/figures/mae_gradient_based.png) ![](5_Validation/5_1_Correctness/figures/mae_deeplift.png) ![](5_Validation/5_1_Correctness/figures/mae_lrp.png)
+<p float="left">
+  <img src="5_Validation/5_1_Correctness/figures/mae_gradient_based.png" width="33%" />
+  <img src="5_Validation/5_1_Correctness/figures/mae_deeplift.png" width="33%" /> 
+  <img src="5_Validation/5_1_Correctness/figures/mae_lrp.png" width="33%" />
+</p>
 
 To start the simulation for the time measurement the following R script must 
 be executed:
@@ -97,7 +104,8 @@ Rscript 5_Validation/5_2_Time/5_2_Time.R
 This creates the images for Figure 12, 15, 16, 17, 18 and 19 from the paper 
 and places them in the folder `5_Validation/5_2_Time/figures/`.
 
-![](5_Validation/5_2_Time/figures/time_hidden_depth_fig-1.png) ![](5_Validation/5_2_Time/figures/time_num_outputs_fig-1.png)
+![](5_Validation/5_2_Time/figures/time_hidden_depth_fig-1.png) 
+![](5_Validation/5_2_Time/figures/time_num_outputs_fig-1.png)
 
 
 ## Appendix B
