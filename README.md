@@ -105,8 +105,8 @@ be executed:
 Rscript 5_Validation/5_2_Time/5_2_Time.R
 ```
 
-This creates the images for Figure 12, 15, 16, 17, 18 and 19 from the paper 
-and places them in the folder `5_Validation/5_2_Time/figures/`.
+This creates the images for Figure 12 (shown), 14, 15, 16, 17 and 18 from the
+paper and places them in the folder `5_Validation/5_2_Time/figures/`.
 
 ![](5_Validation/5_2_Time/figures/time_hidden_depth_fig-1.png) 
 ![](5_Validation/5_2_Time/figures/time_num_outputs_fig-1.png)
