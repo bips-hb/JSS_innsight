@@ -19,7 +19,7 @@ the reference implementations [**captum**](https://captum.ai/),
 between **innsight** and **innvestigate** explained in Appendix B for the 
 LRP $\alpha$-$\beta$-rule when a bias vector occurs in the model.
 
-* The folder `minimal_replication_material/` contains the a minimal R script
+* The folder `R_replication_code_minimal/` contains the a minimal R script
 for the reproduction of the figures in the illustration section (Section 4), 
 which is also an attachment of the JSS submission.
 
