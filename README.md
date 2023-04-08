@@ -19,6 +19,10 @@ the reference implementations [**captum**](https://captum.ai/),
 between **innsight** and **innvestigate** explained in Appendix B for the 
 LRP $\alpha$-$\beta$-rule when a bias vector occurs in the model.
 
+* The folder `minimal_replication_material/` contains the a minimal R script
+for the reproduction of the figures in the illustration section (Section 4), 
+which is also an attachment of the JSS submission.
+
 Since each reference implementation has different constraints on the 
 provided deep learning library and the available packages, the computations 
 occur in separated conda environments with the required packages and package 
@@ -71,7 +75,7 @@ the folder `4_Illustrations/4_2_Melanoma/figures/`.
 
 ![](4_Illustrations/4_2_Melanoma/figures/plot_result_2.png)
 
-### 5 Validation and runtime
+### 5. Validation and runtime
 
 In the paper, our package **innsight** was evaluated with the reference 
 implementations **zennit**, **captum**, **innvestigate** and **deeplift** 
