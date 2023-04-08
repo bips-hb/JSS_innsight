@@ -78,7 +78,7 @@ library("keras")
 if (!is_keras_available()) stop("Call `keras::install_keras()`")
 
 # Set the URL for the model and download the model
-model_url <- "https://github.com/bips-hb/JSS_innsight/raw/master/minimal_replication_material/melanoma_model.h5"
+model_url <- "https://github.com/bips-hb/JSS_innsight/raw/master/R_replication_code_minimal/melanoma_model.h5"
 model_path <- get_file("JSS_innsight_melanoma_model.h5",
                        origin = model_url,
                        cache_subdir = "models")
@@ -100,7 +100,7 @@ converter <- Converter$new(model, input_names = input_names,
                            output_names = output_name)
 
 # Download input data
-input_url <- "https://github.com/bips-hb/JSS_innsight/raw/master/minimal_replication_material/melanoma_inputs.rds"
+input_url <- "https://github.com/bips-hb/JSS_innsight/raw/master/R_replication_code_minimal/melanoma_inputs.rds"
 download.file(input_url, "tmp_df.rds")
 # Load inputs
 input <- readRDS("tmp_df.rds")
