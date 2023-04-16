@@ -5,6 +5,12 @@
 #
 ################################################################################
 
+# NOTE:
+# For a minimal test execution in significantly less time, the number of models
+# per architecture can be reduced, i.e., set `num_models <- 1` for the global
+# attributes
+
+
 # Load required packages
 library(innsight)
 library(torch)
@@ -16,10 +22,17 @@ library(cli)
 library(scales)
 library(ggsci)
 
-# Load LaTeX font (Latin modern)
-library(showtext)
-font_add("LModern_math", "/home/koenen/fonts/latinmodern-math.otf")
-showtext_auto()
+# Load LaTeX font (Latin modern), only relevant for setting the fonts as in the
+# paper, but requires the latinmodern-math font
+use_paper_font <- FALSE
+if (use_paper_font) {
+  library(showtext)
+  font_add("LModern_math", "/home/koenen/fonts/latinmodern-math.otf")
+  showtext_auto()
+  font_name <- "LModern_math"
+} else {
+  font_name <- NULL
+}
 library(ggplot2)
 
 
@@ -28,7 +41,7 @@ library(ggplot2)
 ################################################################################
 
 # Global settings
-num_models <- 50
+num_models <- 50 # <<<<<<<<<<<<<<<<<<<<<< Reduce this value for a test execution
 num_outputs <- c(1, 5)
 src_dir <- "5_Validation/5_1_Correctness"
 batch_size <- 32
@@ -106,10 +119,11 @@ p <- ggplot(res_error[res_error$method_grp %in% c("Gradient-based"), ]) +
   theme(
     legend.position = "top",
     legend.spacing.x = unit(8, 'pt'),
-    text = element_text(family = "LModern_math", size = 15))
+    text = element_text(family = font_name, size = ifelse(is.null(font_name), 5, 15)))
 ggsave(paste0(src_dir, "/figures/mae_gradient_based.pdf"), p, width = 5, height = 5)
 ggsave(paste0(src_dir, "/figures/mae_gradient_based.png"),
-       p + theme(text = element_text(size = 50)), width = 5, height = 5, dpi = 300)
+       p + theme(text = element_text(size = ifelse(is.null(font_name), 10, 50))),
+       width = 5, height = 5, dpi = 300)
 
 # DeepLift
 p <- ggplot(res_error[res_error$method_grp %in% c("DeepLift"), ]) +
@@ -126,10 +140,11 @@ p <- ggplot(res_error[res_error$method_grp %in% c("DeepLift"), ]) +
   theme_bw() +
   theme(legend.position="top",
         legend.spacing.x = unit(8, 'pt'),
-        text = element_text(family="LModern_math", size = 15))
+        text = element_text(family=font_name, size = ifelse(is.null(font_name), 5, 15)))
 ggsave(paste0(src_dir, "/figures/mae_deeplift.pdf"), p, width = 5, height = 5)
 ggsave(paste0(src_dir, "/figures/mae_deeplift.png"),
-       p + theme(text = element_text(size = 50)), width = 5, height = 5, dpi = 300)
+       p + theme(text = element_text(size = ifelse(is.null(font_name), 10, 50))),
+       width = 5, height = 5, dpi = 300)
 
 # LRP
 p <- ggplot(res_error[res_error$method_grp %in% c("LRP"), ]) +
@@ -144,10 +159,11 @@ p <- ggplot(res_error[res_error$method_grp %in% c("LRP"), ]) +
   theme_bw() +
   theme(legend.position="top",
         legend.spacing.x = unit(8, 'pt'),
-        text = element_text(family="LModern_math", size = 15))+
+        text = element_text(family=font_name, size = ifelse(is.null(font_name), 5, 15)))+
   scale_fill_manual(values = pal_npg(c("nrc"), 1)(7)[5:7],
                     labels = c("simple rule", expression(epsilon*"-rule"),
                                expression(alpha*"-"*beta*"-rule")))
 ggsave(paste0(src_dir, "/figures/mae_lrp.pdf"), p, width = 5, height = 5)
 ggsave(paste0(src_dir, "/figures/mae_lrp.png"),
-       p + theme(text = element_text(size = 50)), width = 5, height = 5, dpi = 300)
+       p + theme(text = element_text(size = ifelse(is.null(font_name), 10, 50))),
+       width = 5, height = 5, dpi = 300)

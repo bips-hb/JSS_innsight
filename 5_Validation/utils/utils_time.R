@@ -62,7 +62,7 @@ compare_time <- function(num_models, num_outputs, num_hidden_layers,
 }
 
 
-create_plots <- function(res, var_name, src_dir) {
+create_plots <- function(res, var_name, src_dir, font_name = NULL) {
 
   cowplot::set_null_device("png")
 
@@ -107,19 +107,19 @@ create_plots <- function(res, var_name, src_dir) {
     # Gradient-based
     if (var_name == "hidden_width") {
       p1 <- create_basic_plot(df[df$method_grp == "Gradient-based" & df$data_type == "Tabular input", ],
-                                "Gradient", var_name, limits, NULL, y_label) +
+                                "Gradient", var_name, limits, NULL, y_label, font_name) +
         theme(plot.margin = unit(c(5.5,0,3,5.5), "pt"),
               strip.background.y = element_blank(),
               strip.text.y = element_blank())
       p1_2 <- create_basic_plot(df[df$method_grp == "Gradient-based" & df$data_type == "Image input", ],
-                                "Gradient", var_name, limits, x_label, y_label) +
+                                "Gradient", var_name, limits, x_label, y_label, font_name) +
         theme(plot.margin = unit(c(0,0,5.5,5.5), "pt"),
               strip.background = element_blank(),
               strip.text = element_blank()) +
         guides(shape = "none", linetype = "none")
     } else {
       p1 <- create_basic_plot(df[df$method_grp == "Gradient-based", ],
-                              "Gradient", var_name, limits, x_lab, y_label) +
+                              "Gradient", var_name, limits, x_lab, y_label, font_name) +
         theme(plot.margin = unit(c(5.5,0,5.5,5.5), "pt"),
               strip.background.y = element_blank(),
               strip.text.y = element_blank())
@@ -129,14 +129,14 @@ create_plots <- function(res, var_name, src_dir) {
     # LRP
     if (var_name == "hidden_width") {
       p2 <- create_basic_plot(df[df$method_grp == "LRP" & df$data_type == "Tabular input", ],
-                              "LRP", var_name, limits, NULL, NULL) +
+                              "LRP", var_name, limits, NULL, NULL, font_name) +
         theme(plot.margin =  unit(c(5.5,0,3,0), "pt"),
               strip.background.y = element_blank(),
               strip.text.y = element_blank(),
               axis.ticks.y = element_blank(),
               axis.text.y = element_blank())
       p2_2 <- create_basic_plot(df[df$method_grp == "LRP" & df$data_type == "Image input", ],
-                                "LRP", var_name, limits, x_label, NULL) +
+                                "LRP", var_name, limits, x_label, NULL, font_name) +
         theme(plot.margin =  unit(c(0,0,5.5,0), "pt"),
               strip.background = element_blank(),
               strip.text = element_blank(),
@@ -145,7 +145,7 @@ create_plots <- function(res, var_name, src_dir) {
         guides(shape = "none", linetype = "none")
     } else {
       p2 <- create_basic_plot(df[df$method_grp == "LRP", ],
-                              "LRP", var_name, limits, x_lab, NULL) +
+                              "LRP", var_name, limits, x_lab, NULL, font_name) +
         theme(plot.margin =  unit(c(5.5,0,5.5,0), "pt"),
               strip.background.y = element_blank(),
               strip.text.y = element_blank(),
@@ -156,12 +156,12 @@ create_plots <- function(res, var_name, src_dir) {
     # DeepLift
     if (var_name == "hidden_width") {
       p3 <- create_basic_plot(df[df$method_grp == "DeepLift" & df$data_type == "Tabular input", ],
-                              "DeepLift", var_name, limits, NULL, NULL) +
+                              "DeepLift", var_name, limits, NULL, NULL, font_name) +
         theme(plot.margin =  unit(c(5.5,5.5,3,0), "pt"),
               axis.ticks.y = element_blank(),
               axis.text.y = element_blank())
       p3_2 <- create_basic_plot(df[df$method_grp == "DeepLift" & df$data_type == "Image input", ],
-                                "DeepLift", var_name, limits, x_label, NULL) +
+                                "DeepLift", var_name, limits, x_label, NULL, font_name) +
         theme(plot.margin =  unit(c(0,5.5,5.5,0), "pt"),
               strip.background.x = element_blank(),
               strip.text.x = element_blank(),
@@ -170,7 +170,7 @@ create_plots <- function(res, var_name, src_dir) {
         guides(shape = "none", linetype = "none")
     } else {
       p3 <- create_basic_plot(df[df$method_grp == "DeepLift", ],
-                              "DeepLift", var_name, limits, x_lab, NULL) +
+                              "DeepLift", var_name, limits, x_lab, NULL, font_name) +
         theme(plot.margin =  unit(c(5.5,5.5,5.5,0), "pt"),
               axis.ticks.y = element_blank(),
               axis.text.y = element_blank())
@@ -191,8 +191,10 @@ create_plots <- function(res, var_name, src_dir) {
         p1 +
           guides(color = guide_legend(nrow = 1), linetype = "none", shape = "none") +
           theme(legend.position = "top",
-                legend.text = element_text(size=18, family = "LModern_math" ),
-                legend.title = element_text(size=18, face = "bold", family = "LModern_math"))
+                legend.text = element_text(size=ifelse(is.null(font_name), 6, 18),
+                                           family = font_name),
+                legend.title = element_text(size=ifelse(is.null(font_name), 6, 18),
+                                            face = "bold", family = font_name))
       )
     }
 
@@ -215,7 +217,8 @@ create_plots <- function(res, var_name, src_dir) {
          width = 14, height = 16)
 }
 
-create_basic_plot <- function(df, method_type, var_name, limits, xlabel = NULL, ylabel = NULL) {
+create_basic_plot <- function(df, method_type, var_name, limits, xlabel = NULL,
+                              ylabel = NULL, font_name = NULL) {
   pkgs <- sort(unique(df$pkg))
   p <- ggplot(df, aes(x = .data[[var_name]], colour = pkg)) +
     geom_line(aes(y = mean, linetype = method)) +
@@ -228,7 +231,8 @@ create_basic_plot <- function(df, method_type, var_name, limits, xlabel = NULL, 
     guides(colour = "none") +
     theme(legend.position="top",
           legend.margin=margin(b = 0, t = 0, unit='pt'),
-          text = element_text(family = "LModern_math", size = 15))
+          text = element_text(family = font_name,
+                              size = ifelse(is.null(font_name), 5, 15)))
 
   if (method_type == "Gradient") {
     values <- c(1, 2)
@@ -247,7 +251,7 @@ create_basic_plot <- function(df, method_type, var_name, limits, xlabel = NULL, 
     scale_linetype_manual(values = values, labels = labels)
 }
 
-create_figure_plot <- function(res, src_dir, var_name) {
+create_figure_plot <- function(res, src_dir, var_name, font_name = NULL) {
   cowplot::set_null_device("png")
 
   x_label <- switch(var_name,
@@ -298,7 +302,7 @@ create_figure_plot <- function(res, src_dir, var_name) {
     guides(colour = "none", fill = "none") +
     theme(legend.position="top",
           legend.margin=margin(b = 0, t = 0, unit='pt'),
-          text = element_text(family = "LModern_math", size = 17))
+          text = element_text(family = font_name, size = ifelse(is.null(font_name), 6, 17)))
 
   pkgs <- sort(unique(df[method_grp == "DeepLift",]$pkg))
   p3 <- ggplot(df[method_grp == "DeepLift", ], aes(x = .data[[var_name]], colour = pkg)) +
@@ -317,7 +321,7 @@ create_figure_plot <- function(res, src_dir, var_name) {
           legend.margin=margin(b = 0, t = 0, unit='pt'),
           axis.ticks.y = element_blank(),
           axis.text.y = element_blank(),
-          text = element_text(family = "LModern_math", size = 17))
+          text = element_text(family = font_name, size = ifelse(is.null(font_name), 6, 17)))
 
   pkgs <- sort(unique(df[method_grp == "LRP",]$pkg))
   p2 <- ggplot(df[method_grp == "LRP", ], aes(x = .data[[var_name]], colour = pkg)) +
@@ -338,14 +342,16 @@ create_figure_plot <- function(res, src_dir, var_name) {
           legend.margin=margin(b = 0, t = 0, unit='pt'),
           axis.ticks.y = element_blank(),
           axis.text.y = element_blank(),
-          text = element_text(family = "LModern_math", size = 17))
+          text = element_text(family = font_name, size = ifelse(is.null(font_name), 6, 17)))
 
   legend <- get_legend(
     p1 +
       guides(color = guide_legend(nrow = 1), linetype = "none", shape = "none", fill = "none") +
       theme(legend.position = "top",
-            legend.text = element_text(size=19, family = "LModern_math" ),
-            legend.title = element_text(size=19, face = "bold", family = "LModern_math"))
+            legend.text = element_text(family = font_name, size = ifelse(is.null(font_name), 6, 19)),
+            legend.title = element_text(face = "bold",
+                                        family = font_name,
+                                        size = ifelse(is.null(font_name), 6, 19)))
   )
 
   p <- plot_grid(p1,p2,p3, ncol = 3, rel_widths = rel_widths)

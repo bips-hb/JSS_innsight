@@ -89,6 +89,11 @@ simulation is run to reproduce the results with the following command:
 Rscript 5_Validation/5_1_Correctness/5_1_Correctness.R
 ```
 
+**Note:** Since this simulation takes a lot of time, it can be significantly 
+reduced if fewer models than $50$ are created per architecture. This can be 
+adjusted with the `num_models` value (e.g., `num_models <- 1`) in the R script 
+called above.
+
 This creates the images for Figure 10 from the paper and places them in 
 the folder `5_Validation/5_1_Correctness/figures/`.
 
@@ -104,6 +109,12 @@ be executed:
 ```
 Rscript 5_Validation/5_2_Time/5_2_Time.R
 ```
+
+**Note:** Since this simulation takes a lot of time, it can be significantly 
+reduced if fewer models than $20$ are created per architecture. This can be 
+adjusted with the `num_models` value in the R script called above. In addition, 
+the step size of the varying parameter can also be lowered, e.g., for the 
+number of hidden layers, set `c(2, 25, 50)` instead of `c(2, seq(5, 50, by = 5))`.  
 
 This creates the images for Figure 12 (shown), 14, 15, 16, 17 and 18 from the
 paper and places them in the folder `5_Validation/5_2_Time/figures/`.
