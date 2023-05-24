@@ -1,4 +1,4 @@
-library(reticulate)
+library("reticulate")
 
 # Create conda environment for TensorFlow 1
 conda_create(envname = "JSS_innsight_tf_1", python_version = "3.6.15")
