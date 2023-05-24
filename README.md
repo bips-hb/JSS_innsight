@@ -149,6 +149,7 @@ paper and places them in the folder `figures/`.
 <details>
 <summary>Figures from Appendix A</summary>
 <br>
+
 **Figure 14**
 ![](figures/FIGURE_14-1.png "Fig. 14")
 
