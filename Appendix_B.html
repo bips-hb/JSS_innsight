@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+<title></title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.6.0/build/styles/github.min.css">
+<script src="https://cdn.jsdelivr.net/combine/gh/highlightjs/cdn-release@11.6.0/build/highlight.min.js,npm/@xiee/utils/js/load-highlight.js" async></script>
+
+
+
+<style type="text/css">
+body, td {
+  font-family: sans-serif;
+  background-color: white;
+  font-size: 13px;
+}
+body {
+  max-width: 800px;
+  margin: auto;
+  padding: 1em;
+  line-height: 1.5;
+}
+tt, code, pre {
+  font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace;
+}
+a:visited { color: #80007f; }
+pre, img { max-width: 100%; }
+code {
+  font-size: 92%;
+  border: 1px solid #ccc;
+}
+code[class] { background-color: #F8F8F8; }
+code.language-undefined { background-color: inherit; }
+table {
+  margin: auto;
+  border-top: 1px solid #666;
+  border-bottom: 1px solid #666;
+}
+table thead th { border-bottom: 1px solid #ddd; }
+th, td { padding: 5px; }
+thead, tfoot, tr:nth-child(even) { background: #eee; }
+blockquote {
+  color:#666;
+  margin:0;
+  padding-left: 1em;
+  border-left: 0.5em #eee solid;
+}
+hr { border: 1px #ddd dashed; }
+
+@media print {
+  * {
+    background: transparent !important;
+    color: black !important;
+    filter:none !important;
+  }
+  body {
+    font-size: 12pt;
+    max-width: 100%;
+  }
+  a, a:visited { text-decoration: underline; }
+  hr {
+    visibility: hidden;
+    page-break-before: always;
+  }
+  pre, blockquote {
+    padding-right: 1em;
+    page-break-inside: avoid;
+  }
+  tr, img { page-break-inside: avoid; }
+  img { max-width: 100% !important; }
+  @page :left { margin: 15mm 20mm 15mm 10mm; }
+  @page :right { margin: 15mm 10mm 15mm 20mm; }
+  p, h2, h3 { orphans: 3; widows: 3; }
+  h2, h3 { page-break-after: avoid; }
+}
+</style>
+
+
+
+</head>
+
+<body>
+<pre><code class="language-r">library(&quot;callr&quot;)
+library(&quot;keras&quot;)
+library(&quot;cli&quot;)
+
+###############################################################################
+#                           Utility functions
+###############################################################################
+func_innv &lt;- function(input, model_path) {
+  Sys.setenv(&quot;RETICULATE_PYTHON&quot; = reticulate::conda_python(&quot;JSS_innsight_tf_2&quot;))
+  reticulate::use_condaenv(&quot;JSS_innsight_tf_2&quot;)
+  keras::use_condaenv(&quot;JSS_innsight_tf_2&quot;)
+
+  tf &lt;- reticulate::import(&quot;tensorflow&quot;)
+  innv &lt;- reticulate::import(&quot;innvestigate&quot;)
+  keras &lt;- reticulate::import(&quot;keras&quot;)
+  np &lt;- reticulate::import(&quot;numpy&quot;)
+  tf$compat$v1$disable_eager_execution()
+
+  # Load model
+  model &lt;- keras$models$load_model(model_path)
+
+  # epsilon rule (0.001)
+  analyzer = innv$create_analyzer(&quot;lrp.epsilon&quot;, model, epsilon = 0.01)
+  res1 &lt;- apply(analyzer$analyze(input), 1, sum)
+
+  # alpha-beta rule (alpha = 1)
+  analyzer = innv$create_analyzer(&quot;lrp.alpha_beta&quot;, model, alpha = 1)
+  res2 &lt;- apply(analyzer$analyze(input), 1, sum)
+
+  # alpha-beta rule (alpha = 2)
+  analyzer = innv$create_analyzer(&quot;lrp.alpha_beta&quot;, model, alpha = 2)
+  res3 &lt;- apply(analyzer$analyze(input), 1, sum)
+
+  # model output
+  out &lt;- model$predict(input)
+
+  data.frame(epsilon_0.001 = c(res1), alpha_beta_1 = c(res2),
+             alpha_beta_2 = c(res3), out = c(out))
+}
+
+func_innsight &lt;- function(input, model_path) {
+  library(&quot;innsight&quot;)
+  library(&quot;torch&quot;)
+  library(&quot;keras&quot;)
+  model &lt;- load_model_hdf5(model_path)
+  conv &lt;- Converter$new(model)
+  lrp &lt;- LRP$new(conv, input, channels_first = FALSE, verbose = FALSE,
+                 rule_name = get_rule_name(&quot;epsilon&quot;),
+                 rule_param = get_rule_arg(0.01))
+  res1 &lt;- apply(innsight::get_result(lrp), c(1), sum)
+  lrp &lt;- LRP$new(conv, input, channels_first = FALSE, verbose = FALSE,
+                 rule_name = get_rule_name(&quot;alpha_beta&quot;),
+                 rule_param = get_rule_arg(1))
+  res2 &lt;- apply(innsight::get_result(lrp), c(1), sum)
+  lrp &lt;- LRP$new(conv, input, channels_first = FALSE, verbose = FALSE,
+                 rule_name = get_rule_name(&quot;alpha_beta&quot;),
+                 rule_param = get_rule_arg(2))
+  res3 &lt;- apply(innsight::get_result(lrp), c(1), sum)
+
+  out &lt;- as.array(conv$model(torch_tensor(input), channels_first = FALSE)[[1]])
+
+  data.frame(epsilon_0.001 = c(res1), alpha_beta_1 = c(res2),
+             alpha_beta_2 = c(res3), out = c(out))
+}
+
+get_rule_name &lt;- function(rule_name) {
+  list(
+    Dense_Layer = rule_name,
+    Conv2D_Layer = rule_name,
+    AvgPool2D_Layer = &quot;simple&quot;,
+    BatchNorm_Layer = rule_name
+  )
+}
+
+get_rule_arg &lt;- function(rule_arg) {
+  list(
+    Dense_Layer = rule_arg,
+    Conv2D_Layer = rule_arg,
+    BatchNorm_Layer = rule_arg
+  )
+}
+
+################################################################################
+#                  Check if conda environments are installed
+################################################################################
+library(&quot;reticulate&quot;)
+
+if (!&quot;JSS_innsight_tf_2&quot; %in% conda_list()$name) {
+  x &lt;- readline(paste0(&quot;Not all necessary conda environments are installed. Should&quot;,
+                       &quot; I install them? (y/n)&quot;))
+  if (x == &quot;y&quot;) {
+    conda_create(envname = &quot;JSS_innsight_tf_2&quot;, python_version = &quot;3.8.15&quot;)
+    conda_install(envname = &quot;JSS_innsight_tf_2&quot;,
+                  packages = c(&quot;tensorflow-cpu==2.10&quot;, &quot;keras==2.10.0&quot;,
+                               &quot;innvestigate==2.0.2&quot;),
+                  pip = TRUE)
+
+  } else {
+    stop(&quot;Without the conda environment, the code cannot be executed!&quot;)
+  }
+}
+
+
+###############################################################################
+#     Problem: LRP in innvestigate with bias in linear layers
+###############################################################################
+start_time &lt;- Sys.time()
+
+input &lt;- layer_input(shape = c(1))
+output &lt;- input %&gt;%
+  layer_dense(1, use_bias = TRUE, weights = list(array(1, dim = c(1, 1)), array(-0.25)))
+model &lt;- keras_model(input, output)
+
+model_path &lt;- &quot;tmp_results/Appendix_B/model_LRP_with_bias.h5&quot;
+model$save(model_path)
+
+input &lt;- array(1, dim = c(1, 1))
+res_innv &lt;- r(func_innv, args = list(input = input, model_path = model_path))
+res_innsight &lt;- func_innsight(input, model_path)
+</code></pre>
+<pre><code>## Skipping InputLayer ...
+</code></pre>
+<pre><code class="language-r">cli_h1(&quot;Results&quot;)
+</code></pre>
+<pre><code>## 
+## ── Results ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+</code></pre>
+<pre><code class="language-r">cli_h3(&quot;iNNvestigate&quot;)
+</code></pre>
+<pre><code>## 
+## ── iNNvestigate
+</code></pre>
+<pre><code class="language-r">res_innv
+</code></pre>
+<pre><code>##   epsilon_0.001 alpha_beta_1 alpha_beta_2  out
+## 1     0.9868421            1            2 0.75
+</code></pre>
+<pre><code class="language-r">cli_h3(&quot;innsight&quot;)
+</code></pre>
+<pre><code>## 
+## ── innsight
+</code></pre>
+<pre><code class="language-r">res_innsight
+</code></pre>
+<pre><code>##   epsilon_0.001 alpha_beta_1 alpha_beta_2  out
+## 1     0.9868421    0.7499993     1.499999 0.75
+</code></pre>
+<pre><code class="language-r">###############################################################################
+#                             Print sessionInfo()
+###############################################################################
+cli_h1(&quot;Session Info&quot;)
+</code></pre>
+<pre><code>## 
+## ── Session Info ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+</code></pre>
+<pre><code class="language-r">sessionInfo()
+</code></pre>
+<pre><code>## R version 4.2.3 (2023-03-15)
+## Platform: x86_64-pc-linux-gnu (64-bit)
+## Running under: Ubuntu 20.04.6 LTS
+## 
+## Matrix products: default
+## BLAS:   /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.9.0
+## LAPACK: /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.9.0
+## 
+## locale:
+##  [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
+##  [3] LC_TIME=de_DE.UTF-8        LC_COLLATE=en_US.UTF-8    
+##  [5] LC_MONETARY=de_DE.UTF-8    LC_MESSAGES=en_US.UTF-8   
+##  [7] LC_PAPER=de_DE.UTF-8       LC_NAME=C                 
+##  [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+## [11] LC_MEASUREMENT=de_DE.UTF-8 LC_IDENTIFICATION=C       
+## 
+## attached base packages:
+## [1] grid      stats     graphics  grDevices utils     datasets  methods  
+## [8] base     
+## 
+## other attached packages:
+##  [1] cowplot_1.1.1        showtext_0.9-5       showtextdb_3.0      
+##  [4] sysfonts_0.8.8       ggsci_3.0.0          scales_1.2.1        
+##  [7] R.utils_2.12.2       R.oo_1.25.0          R.methodsS3_1.8.2   
+## [10] data.table_1.14.8    callr_3.7.3          torch_0.9.1         
+## [13] png_0.1-7            gtable_0.3.2         gridExtra_2.3       
+## [16] reticulate_1.26      keras_2.11.0         cli_3.6.0           
+## [19] ggplot2_3.4.1        innsight_0.2.0       neuralnet_1.44.2    
+## [22] palmerpenguins_0.1.1
+## 
+## loaded via a namespace (and not attached):
+##  [1] Rcpp_1.0.10       here_1.0.1        lattice_0.20-45   ps_1.7.2         
+##  [5] zeallot_0.1.0     rprojroot_2.0.3   utf8_1.2.3        mime_0.12        
+##  [9] R6_2.5.1          backports_1.4.1   evaluate_0.18     highr_0.9        
+## [13] pillar_1.8.1      tfruns_1.5.1      rlang_1.1.0       whisker_0.4      
+## [17] Matrix_1.5-3      checkmate_2.1.0   textshaping_0.3.6 labeling_0.4.2   
+## [21] stringr_1.5.0     bit_4.0.5         munsell_0.5.0     compiler_4.2.3   
+## [25] xfun_0.35         pkgconfig_2.0.3   systemfonts_1.0.4 base64enc_0.1-3  
+## [29] tensorflow_2.11.0 tidyselect_1.2.0  tibble_3.2.0      fansi_1.0.4      
+## [33] dplyr_1.1.0       withr_2.5.0       commonmark_1.8.1  rappdirs_0.3.3   
+## [37] jsonlite_1.8.3    lifecycle_1.0.3   magrittr_2.0.3    coro_1.0.3       
+## [41] stringi_1.7.8     farver_2.1.1      ragg_1.2.4        generics_0.1.3   
+## [45] vctrs_0.6.0       tools_4.2.3       bit64_4.0.5       glue_1.6.2       
+## [49] markdown_1.4      processx_3.8.0    parallel_4.2.3    colorspace_2.1-0 
+## [53] knitr_1.41
+</code></pre>
+<pre><code class="language-r">time_diff &lt;- round(difftime(Sys.time(), start_time, units = &quot;mins&quot;), 2)
+cat(&quot;\nTotal execution time: &quot;, col_blue(time_diff), &quot; mins\n&quot;)
+</code></pre>
+<pre><code>## 
+## Total execution time:  0.09  mins
+</code></pre>
+
+
+<script src="https://cdn.jsdelivr.net/combine/npm/@xiee/utils/js/center-img.min.js" async></script>
+</body>
+
+</html>

@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+<title></title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.6.0/build/styles/github.min.css">
+<script src="https://cdn.jsdelivr.net/combine/gh/highlightjs/cdn-release@11.6.0/build/highlight.min.js,npm/@xiee/utils/js/load-highlight.js" async></script>
+
+
+
+<style type="text/css">
+body, td {
+  font-family: sans-serif;
+  background-color: white;
+  font-size: 13px;
+}
+body {
+  max-width: 800px;
+  margin: auto;
+  padding: 1em;
+  line-height: 1.5;
+}
+tt, code, pre {
+  font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace;
+}
+a:visited { color: #80007f; }
+pre, img { max-width: 100%; }
+code {
+  font-size: 92%;
+  border: 1px solid #ccc;
+}
+code[class] { background-color: #F8F8F8; }
+code.language-undefined { background-color: inherit; }
+table {
+  margin: auto;
+  border-top: 1px solid #666;
+  border-bottom: 1px solid #666;
+}
+table thead th { border-bottom: 1px solid #ddd; }
+th, td { padding: 5px; }
+thead, tfoot, tr:nth-child(even) { background: #eee; }
+blockquote {
+  color:#666;
+  margin:0;
+  padding-left: 1em;
+  border-left: 0.5em #eee solid;
+}
+hr { border: 1px #ddd dashed; }
+
+@media print {
+  * {
+    background: transparent !important;
+    color: black !important;
+    filter:none !important;
+  }
+  body {
+    font-size: 12pt;
+    max-width: 100%;
+  }
+  a, a:visited { text-decoration: underline; }
+  hr {
+    visibility: hidden;
+    page-break-before: always;
+  }
+  pre, blockquote {
+    padding-right: 1em;
+    page-break-inside: avoid;
+  }
+  tr, img { page-break-inside: avoid; }
+  img { max-width: 100% !important; }
+  @page :left { margin: 15mm 20mm 15mm 10mm; }
+  @page :right { margin: 15mm 10mm 15mm 20mm; }
+  p, h2, h3 { orphans: 3; widows: 3; }
+  h2, h3 { page-break-after: avoid; }
+}
+</style>
+
+
+
+</head>
+
+<body>
+<pre><code class="language-r">################################################################################
+#
+#   This script creates the figures from Section 5.1 (&quot;Validation&quot;)
+#                   FIGURE 10 (a), (b) &amp; (c)
+#
+################################################################################
+
+# NOTE:
+# For a minimal test execution in significantly less time, the number of models
+# per architecture can be reduced, i.e., set `num_models &lt;- 1` for the global
+# attributes
+
+# Minimal execution (takes only a couple of minutes)
+num_models &lt;- 2
+
+# Paper execution (takes 1-2 days)
+# num_models &lt;- 50
+
+
+# Load required packages
+library(&quot;innsight&quot;)
+library(&quot;torch&quot;)
+</code></pre>
+<pre><code>## 
+## Attaching package: 'torch'
+</code></pre>
+<pre><code>## The following object is masked from 'package:reticulate':
+## 
+##     as_iterator
+</code></pre>
+<pre><code class="language-r">library(&quot;keras&quot;)
+library(&quot;callr&quot;)
+library(&quot;data.table&quot;)
+</code></pre>
+<pre><code>## data.table 1.14.8 using 24 threads (see ?getDTthreads).  Latest news: r-datatable.com
+</code></pre>
+<pre><code class="language-r">library(&quot;R.utils&quot;)
+</code></pre>
+<pre><code>## Loading required package: R.oo
+</code></pre>
+<pre><code>## Loading required package: R.methodsS3
+</code></pre>
+<pre><code>## R.methodsS3 v1.8.2 (2022-06-13 22:00:14 UTC) successfully loaded. See ?R.methodsS3 for help.
+</code></pre>
+<pre><code>## R.oo v1.25.0 (2022-06-12 02:20:02 UTC) successfully loaded. See ?R.oo for help.
+</code></pre>
+<pre><code>## 
+## Attaching package: 'R.oo'
+</code></pre>
+<pre><code>## The following object is masked from 'package:R.methodsS3':
+## 
+##     throw
+</code></pre>
+<pre><code>## The following object is masked from 'package:keras':
+## 
+##     compile
+</code></pre>
+<pre><code>## The following objects are masked from 'package:methods':
+## 
+##     getClasses, getMethods
+</code></pre>
+<pre><code>## The following objects are masked from 'package:base':
+## 
+##     attach, detach, load, save
+</code></pre>
+<pre><code>## R.utils v2.12.2 (2022-11-11 22:00:03 UTC) successfully loaded. See ?R.utils for help.
+</code></pre>
+<pre><code>## 
+## Attaching package: 'R.utils'
+</code></pre>
+<pre><code>## The following object is masked from 'package:keras':
+## 
+##     evaluate
+</code></pre>
+<pre><code>## The following object is masked from 'package:cli':
+## 
+##     ruler
+</code></pre>
+<pre><code>## The following object is masked from 'package:utils':
+## 
+##     timestamp
+</code></pre>
+<pre><code>## The following objects are masked from 'package:base':
+## 
+##     cat, commandArgs, getOption, isOpen, nullfile, parse, warnings
+</code></pre>
+<pre><code class="language-r">library(&quot;cli&quot;)
+library(&quot;scales&quot;)
+library(&quot;ggsci&quot;)
+
+# Load LaTeX font (Latin modern), only relevant for setting the fonts as in the
+# paper, but requires the latinmodern-math font
+library(&quot;showtext&quot;)
+</code></pre>
+<pre><code>## Loading required package: sysfonts
+</code></pre>
+<pre><code>## Loading required package: showtextdb
+</code></pre>
+<pre><code class="language-r">font_add(&quot;LModern_math&quot;, &quot;additional_files/latinmodern-math.otf&quot;)
+showtext_auto()
+
+library(&quot;ggplot2&quot;)
+
+
+################################################################################
+#                  Check if conda environments are installed
+################################################################################
+library(&quot;reticulate&quot;)
+
+required_conda_envs &lt;- c(
+  &quot;JSS_innsight_tf_1&quot;,   # for the python package 'deeplift'
+  &quot;JSS_innsight_tf_2&quot;,   # for the python package 'innvestigate'
+  &quot;JSS_innsight_pytorch&quot; # for the python packages 'captum' and 'zennit'
+)
+
+if (any(!(required_conda_envs %in% conda_list()$name))) {
+  x &lt;- readline(paste0(&quot;Not all necessary conda environments are installed. Should&quot;,
+                &quot; I install them? (y/n)&quot;))
+  if (x == &quot;y&quot;) {
+    source(&quot;utils/create_condaenvs.R&quot;)
+
+  } else {
+    stop(&quot;Without the conda environments, the code cannot be executed!&quot;)
+  }
+}
+</code></pre>
+<pre><code>## + '/home/koenen/.local/share/r-miniconda/bin/conda' 'create' '--yes' '--name' 'JSS_innsight_tf_1' 'python=3.6.15' '--quiet' '-c' 'conda-forge'
+</code></pre>
+<pre><code>## + '/home/koenen/.local/share/r-miniconda/bin/conda' 'create' '--yes' '--name' 'JSS_innsight_tf_2' 'python=3.8.15' '--quiet' '-c' 'conda-forge'
+</code></pre>
+<pre><code>## + '/home/koenen/.local/share/r-miniconda/bin/conda' 'create' '--yes' '--name' 'JSS_innsight_pytorch' 'python=3.8.12' '--quiet' '-c' 'conda-forge'
+</code></pre>
+<pre><code class="language-r">################################################################################
+#                       Configuration and pre-processing
+################################################################################
+start_time &lt;- Sys.time()
+
+# Global settings
+num_outputs &lt;- c(1, 5)
+src_dir &lt;- &quot;tmp_results/5_1_Correctness&quot;
+batch_size &lt;- 32
+show &lt;- FALSE # only for debugging
+
+# Define experiment configs
+# models for tabular data
+config_tab = expand.grid(
+  input_shape = list(c(batch_size, 10)),
+  bias = c(TRUE, FALSE),
+  act = c(&quot;relu&quot;, &quot;tanh&quot;),
+  num_outputs = num_outputs
+)
+
+# models for image data
+config_2D &lt;- expand.grid(
+  input_shape = list(c(batch_size, 10, 10, 3)),
+  bias = c(TRUE, FALSE),
+  act = c(&quot;relu&quot;, &quot;tanh&quot;),
+  batchnorm = c(&quot;none&quot;),
+  pooling = c(&quot;none&quot;, &quot;avg&quot;, &quot;max&quot;),
+  num_outputs = num_outputs
+)
+
+config &lt;- list(config_tab = config_tab, config_2D = config_2D)
+
+# Define methods to be applied
+methods &lt;- c(
+  &quot;Gradient&quot;, &quot;GradxInput&quot;,
+  &quot;LRP_simple_0&quot;, &quot;LRP_epsilon_0.01&quot;, &quot;LRP_alpha-beta_1&quot;, &quot;LRP_alpha-beta_2&quot;,
+  &quot;DeepLift_rescale_zeros&quot;, &quot;DeepLift_rescale_norm&quot;,
+  &quot;DeepLift_reveal-cancel_zeros&quot;, &quot;DeepLift_reveal-cancel_norm&quot;
+)
+
+# Generate models
+source(&quot;utils/utils_validation/preprocess/preprocess.R&quot;)
+model_config &lt;- preprocess(num_models, config, src_dir)
+</code></pre>
+<pre><code>## 
+</code></pre>
+<pre><code>## ── Pre-processing ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+</code></pre>
+<pre><code>## 
+ℹ Creating model configuration file[K
+
+✔ Creating model configuration file [15ms][K
+## 
+ℹ Creating torch models[K
+
+✔ Creating torch models [3.4s][K
+## 
+ℹ Creating keras models[K
+
+✔ Creating keras models [7.9s][K
+## 
+ℹ Creating inputs[K
+
+✔ Creating inputs [48ms][K
+</code></pre>
+<pre><code class="language-r">################################################################################
+#                               Run benchmark
+################################################################################
+
+source(&quot;utils/utils_validation/methods/benchmark.R&quot;)
+result &lt;- benchmark(methods, model_config, show, src_dir)
+</code></pre>
+<pre><code>## 
+## ── Bechmarking ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## 
+## ── Benchmarking innsight vs. zennit 
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [20.9s][K
+## 
+ℹ Calculating zennit[K
+
+[K
+## ℹ Calculating zennit
+
+[K── Benchmarking innsight vs. captum 
+## ℹ Calculating zennit
+
+✔ Calculating zennit [15.9s][K
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [21.6s][K
+## 
+ℹ Calculating captum[K
+
+[K
+## ℹ Calculating captum
+
+[K── Benchmarking innsight vs. innvestigate 
+## ℹ Calculating captum
+
+✔ Calculating captum [15.9s][K
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [33.6s][K
+## 
+ℹ Calculating innvestigate[K
+
+[K
+## ℹ Calculating innvestigate
+
+[K── Benchmarking innsight vs. deeplift 
+## ℹ Calculating innvestigate
+
+✔ Calculating innvestigate [1m 19s][K
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [35.3s][K
+## 
+ℹ Calculating deeplift[K
+
+✔ Calculating deeplift [1m 52.8s][K
+</code></pre>
+<pre><code class="language-r">################################################################################
+#                                 Create plots
+################################################################################
+
+cli::cli_h1(&quot;Creating Plots&quot;)
+</code></pre>
+<pre><code>## 
+## ── Creating Plots ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+</code></pre>
+<pre><code class="language-r">source(&quot;utils/utils_validation/utils.R&quot;)
+
+# result with the MAE error
+res_error &lt;- result[[1]]
+
+# Gradient-based methods (FIGURE 10 (a))
+p &lt;- ggplot(res_error[res_error$method_grp %in% c(&quot;Gradient-based&quot;), ]) +
+  geom_boxplot(aes(y = error, x = pkg, fill = method),
+               outlier.size = 0.75,
+               outlier.alpha = 0.25) +
+  facet_grid(cols = vars(method_grp)) +
+  scale_y_continuous(trans = log10_with_0_trans(9), limits = c(0, 1e0)) +
+  add_gray_box() +
+  scale_fill_manual(values = pal_npg(c(&quot;nrc&quot;), 1)(7)[1:2],
+                    labels = c(&quot;Gradient&quot;, &quot;Gradient\u00D7Input&quot;)) +
+  geom_hline(yintercept = 0, alpha = 0.5) +
+  labs(y = &quot;Mean absolute error (MAE)&quot;,
+       x = &quot;Package&quot;,
+       fill = NULL) +
+  theme_bw() +
+  theme(
+    legend.position = &quot;top&quot;,
+    legend.spacing.x = unit(8, 'pt'),
+    text = element_text(family = &quot;LModern_math&quot;, size = 15))
+ggsave(&quot;figures/FIGURE_10_a.pdf&quot;, p, width = 5, height = 5)
+
+# DeepLift (FIGURE 10 (b))
+p &lt;- ggplot(res_error[res_error$method_grp %in% c(&quot;DeepLift&quot;), ]) +
+  geom_boxplot(aes(y = error, x = pkg, fill = method),
+               outlier.size = 0.75,
+               outlier.alpha = 0.25) +
+  facet_grid(cols = vars(method_grp)) +
+  scale_y_continuous(trans = log10_with_0_trans(9), limits = c(0, 1e0)) +
+  add_gray_box() +
+  scale_fill_manual(values = pal_npg(c(&quot;nrc&quot;), 1)(7)[3:4],
+                    labels = c(&quot;Rescale&quot;, &quot;RevealCancel&quot;)) +
+  geom_hline(yintercept = 0, alpha = 0.5) +
+  labs(y = NULL, x = &quot;Package&quot;, fill = NULL) +
+  theme_bw() +
+  theme(legend.position=&quot;top&quot;,
+        legend.spacing.x = unit(8, 'pt'),
+        text = element_text(family=&quot;LModern_math&quot;, size = 15))
+ggsave(&quot;figures/FIGURE_10_b.pdf&quot;, p, width = 5, height = 5)
+
+# LRP (FIGURE 10 (c))
+p &lt;- ggplot(res_error[res_error$method_grp %in% c(&quot;LRP&quot;), ]) +
+  geom_boxplot(aes(y = error, x = pkg, fill = method),
+               outlier.size = 0.75,
+               outlier.alpha = 0.25) +
+  facet_grid(cols = vars(method_grp), rows = vars(bias)) +
+  scale_y_continuous(trans = log10_with_0_trans(9, 4), limits = c(0, 1e2)) +
+  add_gray_box() +
+  geom_hline(yintercept = 0, alpha = 0.5) +
+  labs(y = NULL, x = &quot;Package&quot;, fill = NULL) +
+  theme_bw() +
+  theme(legend.position=&quot;top&quot;,
+        legend.spacing.x = unit(8, 'pt'),
+        text = element_text(family=&quot;LModern_math&quot;, size = 15))+
+  scale_fill_manual(values = pal_npg(c(&quot;nrc&quot;), 1)(7)[5:7],
+                    labels = c(&quot;simple rule&quot;, expression(epsilon*&quot;-rule&quot;),
+                               expression(alpha*&quot;-&quot;*beta*&quot;-rule&quot;)))
+ggsave(&quot;figures/FIGURE_10_c.pdf&quot;, p, width = 5, height = 5)
+</code></pre>
+<pre><code>## Warning: Removed 3 rows containing non-finite values (`stat_boxplot()`).
+</code></pre>
+<pre><code class="language-r">################################################################################
+#                             Outlier analysis
+################################################################################
+
+cli::cli_h1(&quot;Outlier Analysis&quot;)
+</code></pre>
+<pre><code>## 
+## ── Outlier Analysis ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+</code></pre>
+<pre><code class="language-r"># DeepLift
+outliers_deeplift &lt;- res_error[res_error$method_grp == &quot;DeepLift&quot; &amp; res_error$error &gt; 1e-6]
+cli_text(&quot;Number (Percentage) of models with hyperbolic tangent as activation &quot;,
+      &quot;among all DeepLift simulations exceeding an error of 1e-6: \n&quot;,
+      sum(outliers_deeplift$act == &quot;tanh&quot;), &quot; (&quot;,
+      round(mean(outliers_deeplift$act == &quot;tanh&quot;) * 100, 2), &quot;%)&quot;)
+</code></pre>
+<pre><code>## Number (Percentage) of models with hyperbolic tangent as activation among all DeepLift simulations exceeding an error of 1e-6: 43 (100%)
+</code></pre>
+<pre><code class="language-r"># LRP
+outliers_lrp &lt;- res_error[res_error$method_grp == &quot;LRP&quot; &amp;
+                            res_error$method != &quot;LRP (alpha-beta)&quot; &amp;
+                            res_error$error &gt; 1e-6]
+cli_text(&quot;Number (Percentage) of models with hyperbolic tangent as activation &quot;,
+         &quot;among all LRP simulations exceeding an error of 1e-6: \n&quot;,
+         sum(outliers_lrp$act == &quot;tanh&quot;), &quot; (&quot;,
+         round(mean(outliers_lrp$act == &quot;tanh&quot;) * 100, 2), &quot;%)&quot;)
+</code></pre>
+<pre><code>## Number (Percentage) of models with hyperbolic tangent as activation among all LRP simulations exceeding an error of 1e-6: 110 (98.21%)
+</code></pre>
+<pre><code class="language-r">###############################################################################
+#                             Print sessionInfo()
+###############################################################################
+cli_h1(&quot;Session Info&quot;)
+</code></pre>
+<pre><code>## 
+## ── Session Info ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+</code></pre>
+<pre><code class="language-r">sessionInfo()
+</code></pre>
+<pre><code>## R version 4.2.3 (2023-03-15)
+## Platform: x86_64-pc-linux-gnu (64-bit)
+## Running under: Ubuntu 20.04.6 LTS
+## 
+## Matrix products: default
+## BLAS:   /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.9.0
+## LAPACK: /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.9.0
+## 
+## locale:
+##  [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
+##  [3] LC_TIME=de_DE.UTF-8        LC_COLLATE=en_US.UTF-8    
+##  [5] LC_MONETARY=de_DE.UTF-8    LC_MESSAGES=en_US.UTF-8   
+##  [7] LC_PAPER=de_DE.UTF-8       LC_NAME=C                 
+##  [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+## [11] LC_MEASUREMENT=de_DE.UTF-8 LC_IDENTIFICATION=C       
+## 
+## attached base packages:
+## [1] grid      stats     graphics  grDevices utils     datasets  methods  
+## [8] base     
+## 
+## other attached packages:
+##  [1] showtext_0.9-5       showtextdb_3.0       sysfonts_0.8.8      
+##  [4] ggsci_3.0.0          scales_1.2.1         R.utils_2.12.2      
+##  [7] R.oo_1.25.0          R.methodsS3_1.8.2    data.table_1.14.8   
+## [10] callr_3.7.3          torch_0.9.1          png_0.1-7           
+## [13] gtable_0.3.2         gridExtra_2.3        reticulate_1.26     
+## [16] keras_2.11.0         cli_3.6.0            ggplot2_3.4.1       
+## [19] innsight_0.2.0       neuralnet_1.44.2     palmerpenguins_0.1.1
+## 
+## loaded via a namespace (and not attached):
+##  [1] Rcpp_1.0.10       here_1.0.1        lattice_0.20-45   ps_1.7.2         
+##  [5] zeallot_0.1.0     rprojroot_2.0.3   utf8_1.2.3        mime_0.12        
+##  [9] R6_2.5.1          backports_1.4.1   evaluate_0.18     highr_0.9        
+## [13] pillar_1.8.1      tfruns_1.5.1      rlang_1.1.0       whisker_0.4      
+## [17] Matrix_1.5-3      checkmate_2.1.0   textshaping_0.3.6 labeling_0.4.2   
+## [21] stringr_1.5.0     bit_4.0.5         munsell_0.5.0     compiler_4.2.3   
+## [25] xfun_0.35         pkgconfig_2.0.3   systemfonts_1.0.4 base64enc_0.1-3  
+## [29] tensorflow_2.11.0 tidyselect_1.2.0  tibble_3.2.0      fansi_1.0.4      
+## [33] dplyr_1.1.0       withr_2.5.0       commonmark_1.8.1  rappdirs_0.3.3   
+## [37] jsonlite_1.8.3    lifecycle_1.0.3   magrittr_2.0.3    coro_1.0.3       
+## [41] stringi_1.7.8     farver_2.1.1      ragg_1.2.4        generics_0.1.3   
+## [45] vctrs_0.6.0       tools_4.2.3       bit64_4.0.5       glue_1.6.2       
+## [49] markdown_1.4      processx_3.8.0    parallel_4.2.3    colorspace_2.1-0 
+## [53] knitr_1.41
+</code></pre>
+<pre><code class="language-r">time_diff &lt;- round(difftime(Sys.time(), start_time, units = &quot;mins&quot;), 2)
+cat(&quot;\nTotal execution time: &quot;, col_blue(time_diff), &quot; mins\n&quot;)
+</code></pre>
+<pre><code>## 
+## Total execution time:  6.19  mins
+</code></pre>
+
+
+<script src="https://cdn.jsdelivr.net/combine/npm/@xiee/utils/js/center-img.min.js" async></script>
+</body>
+
+</html>

@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+<title></title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.6.0/build/styles/github.min.css">
+<script src="https://cdn.jsdelivr.net/combine/gh/highlightjs/cdn-release@11.6.0/build/highlight.min.js,npm/@xiee/utils/js/load-highlight.js" async></script>
+
+
+
+<style type="text/css">
+body, td {
+  font-family: sans-serif;
+  background-color: white;
+  font-size: 13px;
+}
+body {
+  max-width: 800px;
+  margin: auto;
+  padding: 1em;
+  line-height: 1.5;
+}
+tt, code, pre {
+  font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace;
+}
+a:visited { color: #80007f; }
+pre, img { max-width: 100%; }
+code {
+  font-size: 92%;
+  border: 1px solid #ccc;
+}
+code[class] { background-color: #F8F8F8; }
+code.language-undefined { background-color: inherit; }
+table {
+  margin: auto;
+  border-top: 1px solid #666;
+  border-bottom: 1px solid #666;
+}
+table thead th { border-bottom: 1px solid #ddd; }
+th, td { padding: 5px; }
+thead, tfoot, tr:nth-child(even) { background: #eee; }
+blockquote {
+  color:#666;
+  margin:0;
+  padding-left: 1em;
+  border-left: 0.5em #eee solid;
+}
+hr { border: 1px #ddd dashed; }
+
+@media print {
+  * {
+    background: transparent !important;
+    color: black !important;
+    filter:none !important;
+  }
+  body {
+    font-size: 12pt;
+    max-width: 100%;
+  }
+  a, a:visited { text-decoration: underline; }
+  hr {
+    visibility: hidden;
+    page-break-before: always;
+  }
+  pre, blockquote {
+    padding-right: 1em;
+    page-break-inside: avoid;
+  }
+  tr, img { page-break-inside: avoid; }
+  img { max-width: 100% !important; }
+  @page :left { margin: 15mm 20mm 15mm 10mm; }
+  @page :right { margin: 15mm 10mm 15mm 20mm; }
+  p, h2, h3 { orphans: 3; widows: 3; }
+  h2, h3 { page-break-after: avoid; }
+}
+</style>
+
+
+
+</head>
+
+<body>
+<pre><code class="language-r">################################################################################
+#
+#   This script creates the figures from Section 5.2 (&quot;Validation&quot;)
+#                   Figure 12 (a) &amp; (b)
+#   and the additional figures from Appendix A.3
+#               Figure 14, 15, 16, 17 &amp; 18
+#
+################################################################################
+
+# NOTE:
+# For a minimal test execution in significantly less time, the number of models
+# per architecture can be reduced, i.e. set `num_models &lt;- 1` for the global
+# attributes. In addition, the step size of the varying parameter can also be
+# lowered, e.g., for the number of hidden layers, set `c(2, 25, 50)` instead
+# of `c(2, seq(5, 50, by = 5))`.
+
+# Minimal execution
+num_models &lt;- 1
+IMAGE_SHAPES &lt;- lapply(c(10, seq(5) * 80 + 4), function(x) c(x,x,3))
+NUM_OUTPUTS &lt;- c(1, seq(20, 100, by = 20))
+NUM_HIDDEN_LAYERS &lt;- c(2, seq(10, 50, by = 10))
+NUM_HIDDEN_UNITS &lt;- list(c(100, seq(600, 3000, by = 600)), c(10, seq(200, 1000, by = 200)))
+BATCH_SIZES &lt;- c(100, seq(600, 3000, by = 600))
+
+# Paper execution
+#num_models &lt;- 20
+#IMAGE_SHAPES &lt;- lapply(c(10, seq(10) * 40 + 4), function(x) c(x,x,3))
+#NUM_OUTPUTS &lt;- c(1, seq(10, 100, by = 10))
+#NUM_HIDDEN_LAYERS &lt;- c(2, seq(5, 50, by = 5))
+#NUM_HIDDEN_UNITS &lt;- list(c(100, seq(300, 3000, by = 300)), c(10, seq(100, 1000, by = 100)))
+#BATCH_SIZES &lt;- c(100, seq(300, 3000, by = 300))
+
+# Load required packages
+library(&quot;innsight&quot;)
+library(&quot;torch&quot;)
+library(&quot;keras&quot;)
+library(&quot;callr&quot;)
+library(&quot;cowplot&quot;)
+library(&quot;data.table&quot;)
+library(&quot;R.utils&quot;)
+library(&quot;cli&quot;)
+library(&quot;scales&quot;)
+library(&quot;ggsci&quot;)
+library(&quot;cowplot&quot;)
+
+# Load LaTeX font (Latin modern), only relevant for setting the fonts as in the
+# paper, but requires the latinmodern-math font
+library(&quot;showtext&quot;)
+font_add(&quot;LModern_math&quot;, &quot;additional_files/latinmodern-math.otf&quot;)
+showtext_auto()
+
+library(&quot;ggplot2&quot;)
+
+
+# Load utility functions
+source(&quot;utils/utils_validation/utils_time.R&quot;)
+
+
+################################################################################
+#                  Check if conda environments are installed
+################################################################################
+library(&quot;reticulate&quot;)
+
+required_conda_envs &lt;- c(
+  &quot;JSS_innsight_tf_1&quot;,   # for the python package 'deeplift'
+  &quot;JSS_innsight_tf_2&quot;,   # for the python package 'innvestigate'
+  &quot;JSS_innsight_pytorch&quot; # for the python packages 'captum' and 'zennit'
+)
+
+if (any(!(required_conda_envs %in% conda_list()$name))) {
+  x &lt;- readline(paste0(&quot;Not all necessary conda environments are installed. Should&quot;,
+                       &quot; I install them? (y/n)&quot;))
+  if (x == &quot;y&quot;) {
+    source(&quot;utils/create_condaenvs.R&quot;)
+
+  } else {
+    stop(&quot;Without the conda environments, the code cannot be executed!&quot;)
+  }
+}
+
+start_time &lt;- Sys.time()
+
+################################################################################
+#                 Time comparison for image size (FIGURE 18)
+################################################################################
+num_outputs &lt;- c(1)
+num_hidden_layers &lt;- c(2)
+num_hidden_units &lt;- list(c(16), c(5)) # first for tabular (units) and second for image (filters)
+image_shapes &lt;- IMAGE_SHAPES
+batch_sizes &lt;- c(16)
+src_dir &lt;- &quot;tmp_results/5_2_Image_size&quot;
+
+res &lt;- compare_time(num_models, num_outputs, num_hidden_layers,
+                    num_hidden_units, src_dir, batch_sizes,
+                    image_shapes = image_shapes)
+</code></pre>
+<pre><code>## 
+</code></pre>
+<pre><code>## ── Pre-processing ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+</code></pre>
+<pre><code>## 
+ℹ Creating model configuration file[K
+
+✔ Creating model configuration file [6ms][K
+## 
+ℹ Creating torch models[K
+
+✔ Creating torch models [3.4s][K
+## 
+ℹ Creating keras models[K
+
+✔ Creating keras models [5.4s][K
+## 
+ℹ Creating inputs[K
+
+✔ Creating inputs [12.7s][K
+## 
+## ── Bechmarking ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## 
+## ── Benchmarking innsight vs. zennit 
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [27.7s][K
+## 
+ℹ Calculating zennit[K
+
+[K
+## ℹ Calculating zennit
+
+[K── Benchmarking innsight vs. captum 
+## ℹ Calculating zennit
+
+✔ Calculating zennit [25.9s][K
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [29.4s][K
+## 
+ℹ Calculating captum[K
+
+[K
+## ℹ Calculating captum
+
+[K── Benchmarking innsight vs. innvestigate 
+## ℹ Calculating captum
+
+✔ Calculating captum [24.2s][K
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [35.5s][K
+## 
+ℹ Calculating innvestigate[K
+
+[K
+## ℹ Calculating innvestigate
+
+[K── Benchmarking innsight vs. deeplift 
+## ℹ Calculating innvestigate
+
+✔ Calculating innvestigate [38.8s][K
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [39s][K
+## 
+ℹ Calculating deeplift[K
+
+✔ Calculating deeplift [40.6s][K
+</code></pre>
+<pre><code class="language-r">create_plots(res, &quot;num_inputs&quot;)
+
+################################################################################
+#           Time comparison for output nodes (FIGURE 12 (b) &amp; 14)
+################################################################################
+num_outputs &lt;- NUM_OUTPUTS
+num_hidden_layers &lt;- c(2)
+num_hidden_units &lt;- list(c(16), c(5)) # first for tabular (units) and second for image (filters)
+batch_sizes &lt;- c(16)
+src_dir &lt;- &quot;tmp_results/5_2_Num_Outputs&quot;
+
+res &lt;- compare_time(num_models, num_outputs, num_hidden_layers,
+                    num_hidden_units, src_dir, batch_sizes)
+</code></pre>
+<pre><code>## 
+## ── Pre-processing ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## 
+ℹ Creating model configuration file[K
+
+✔ Creating model configuration file [6ms][K
+## 
+ℹ Creating torch models[K
+
+✔ Creating torch models [3.4s][K
+## 
+ℹ Creating keras models[K
+
+✔ Creating keras models [5.7s][K
+## 
+ℹ Creating inputs[K
+
+✔ Creating inputs [49ms][K
+## 
+## ── Bechmarking ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## 
+## ── Benchmarking innsight vs. zennit 
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [14.2s][K
+## 
+ℹ Calculating zennit[K
+
+[K
+## ℹ Calculating zennit
+
+[K── Benchmarking innsight vs. captum 
+## ℹ Calculating zennit
+
+✔ Calculating zennit [15.2s][K
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [14.5s][K
+## 
+ℹ Calculating captum[K
+
+[K
+## ℹ Calculating captum
+
+[K── Benchmarking innsight vs. innvestigate 
+## ℹ Calculating captum
+
+✔ Calculating captum [14.2s][K
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [18.7s][K
+## 
+ℹ Calculating innvestigate[K
+
+[K
+## ℹ Calculating innvestigate
+
+[K── Benchmarking innsight vs. deeplift 
+## ℹ Calculating innvestigate
+
+✔ Calculating innvestigate [31s][K
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [18s][K
+## 
+ℹ Calculating deeplift[K
+
+✔ Calculating deeplift [3m 21.6s][K
+</code></pre>
+<pre><code class="language-r">create_plots(res, &quot;num_outputs&quot;)
+create_figure_plot(res, &quot;num_outputs&quot;)
+
+################################################################################
+#            Time comparison for number layers (FIGURE 12 (a) &amp; 15)
+################################################################################
+num_outputs &lt;- c(1)
+num_hidden_layers &lt;- NUM_HIDDEN_LAYERS
+num_hidden_units &lt;-  list(c(16), c(5))
+batch_sizes &lt;- c(16)
+src_dir &lt;- &quot;tmp_results/5_2_Num_Layers&quot;
+
+res &lt;- compare_time(num_models, num_outputs, num_hidden_layers,
+                    num_hidden_units, src_dir, batch_sizes)
+</code></pre>
+<pre><code>## 
+## ── Pre-processing ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## 
+ℹ Creating model configuration file[K
+
+✔ Creating model configuration file [6ms][K
+## 
+ℹ Creating torch models[K
+
+✔ Creating torch models [3.4s][K
+## 
+ℹ Creating keras models[K
+
+✔ Creating keras models [8.3s][K
+## 
+ℹ Creating inputs[K
+
+✔ Creating inputs [44ms][K
+## 
+## ── Bechmarking ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## 
+## ── Benchmarking innsight vs. zennit 
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [16.7s][K
+## 
+ℹ Calculating zennit[K
+
+[K
+## ℹ Calculating zennit
+
+[K── Benchmarking innsight vs. captum 
+## ℹ Calculating zennit
+
+✔ Calculating zennit [5.6s][K
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [17s][K
+## 
+ℹ Calculating captum[K
+
+[K
+## ℹ Calculating captum
+
+[K── Benchmarking innsight vs. innvestigate 
+## ℹ Calculating captum
+
+✔ Calculating captum [5.5s][K
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [30s][K
+## 
+ℹ Calculating innvestigate[K
+
+[K
+## ℹ Calculating innvestigate
+
+[K── Benchmarking innsight vs. deeplift 
+## ℹ Calculating innvestigate
+
+✔ Calculating innvestigate [7m 31.4s][K
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [27.4s][K
+## 
+ℹ Calculating deeplift[K
+
+✔ Calculating deeplift [2m 7.8s][K
+</code></pre>
+<pre><code>## Warning in cor(m1, m2): the standard deviation is zero
+</code></pre>
+<pre><code class="language-r">create_plots(res, &quot;hidden_depth&quot;)
+create_figure_plot(res, &quot;hidden_depth&quot;)
+
+################################################################################
+#               Time comparison for hidden width (FIGURE 16)
+################################################################################
+num_outputs &lt;- c(1)
+num_hidden_layers &lt;- c(2)
+num_hidden_units &lt;- NUM_HIDDEN_UNITS
+batch_sizes &lt;- c(16)
+src_dir &lt;- &quot;tmp_results/5_2_Num_Units&quot;
+
+res &lt;- compare_time(num_models, num_outputs, num_hidden_layers,
+                    num_hidden_units, src_dir, batch_sizes)
+</code></pre>
+<pre><code>## 
+## ── Pre-processing ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## 
+ℹ Creating model configuration file[K
+
+✔ Creating model configuration file [6ms][K
+## 
+ℹ Creating torch models[K
+
+✔ Creating torch models [3.8s][K
+## 
+ℹ Creating keras models[K
+
+✔ Creating keras models [6.2s][K
+## 
+ℹ Creating inputs[K
+
+✔ Creating inputs [44ms][K
+## 
+## ── Bechmarking ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## 
+## ── Benchmarking innsight vs. zennit 
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [3m 9.5s][K
+## 
+ℹ Calculating zennit[K
+
+[K
+## ℹ Calculating zennit
+
+[K── Benchmarking innsight vs. captum 
+## ℹ Calculating zennit
+
+✔ Calculating zennit [27.1s][K
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [3m 20s][K
+## 
+ℹ Calculating captum[K
+
+[K
+## ℹ Calculating captum
+
+[K── Benchmarking innsight vs. innvestigate 
+## ℹ Calculating captum
+
+✔ Calculating captum [19.3s][K
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [2m 3.8s][K
+## 
+ℹ Calculating innvestigate[K
+
+[K
+## ℹ Calculating innvestigate
+
+[K── Benchmarking innsight vs. deeplift 
+## ℹ Calculating innvestigate
+
+✔ Calculating innvestigate [53.5s][K
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [3m 4.4s][K
+## 
+ℹ Calculating deeplift[K
+
+✔ Calculating deeplift [1m 38.2s][K
+</code></pre>
+<pre><code class="language-r">create_plots(res, &quot;hidden_width&quot;)
+
+################################################################################
+#               Time comparison for batch_size (FIGURE 17)
+################################################################################
+num_outputs &lt;- c(1)
+num_hidden_layers &lt;- c(2)
+num_hidden_units &lt;- list(c(16), c(5))
+batch_sizes &lt;- BATCH_SIZES
+src_dir &lt;- &quot;tmp_results/5_2_Batch_Size&quot;
+
+res &lt;- compare_time(num_models, num_outputs, num_hidden_layers,
+                    num_hidden_units, src_dir, batch_sizes)
+</code></pre>
+<pre><code>## 
+## ── Pre-processing ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## 
+ℹ Creating model configuration file[K
+
+✔ Creating model configuration file [6ms][K
+## 
+ℹ Creating torch models[K
+
+✔ Creating torch models [3.4s][K
+## 
+ℹ Creating keras models[K
+
+✔ Creating keras models [5.7s][K
+## 
+ℹ Creating inputs[K
+
+✔ Creating inputs [1.9s][K
+## 
+## ── Bechmarking ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## 
+## ── Benchmarking innsight vs. zennit 
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [21.4s][K
+## 
+ℹ Calculating zennit[K
+
+[K
+## ℹ Calculating zennit
+
+[K── Benchmarking innsight vs. captum 
+## ℹ Calculating zennit
+
+✔ Calculating zennit [18.9s][K
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [21.9s][K
+## 
+ℹ Calculating captum[K
+
+[K
+## ℹ Calculating captum
+
+[K── Benchmarking innsight vs. innvestigate 
+## ℹ Calculating captum
+
+✔ Calculating captum [19.4s][K
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [26.6s][K
+## 
+ℹ Calculating innvestigate[K
+
+[K
+## ℹ Calculating innvestigate
+
+[K── Benchmarking innsight vs. deeplift 
+## ℹ Calculating innvestigate
+
+✔ Calculating innvestigate [37.4s][K
+## 
+ℹ Calculating innsight[K
+
+✔ Calculating innsight [25.5s][K
+## 
+ℹ Calculating deeplift[K
+
+✔ Calculating deeplift [32.5s][K
+</code></pre>
+<pre><code class="language-r">create_plots(res, &quot;batch_size&quot;)
+
+
+###############################################################################
+#                             Print sessionInfo()
+###############################################################################
+cli_h1(&quot;Session Info&quot;)
+</code></pre>
+<pre><code>## 
+## ── Session Info ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+</code></pre>
+<pre><code class="language-r">sessionInfo()
+</code></pre>
+<pre><code>## R version 4.2.3 (2023-03-15)
+## Platform: x86_64-pc-linux-gnu (64-bit)
+## Running under: Ubuntu 20.04.6 LTS
+## 
+## Matrix products: default
+## BLAS:   /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.9.0
+## LAPACK: /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.9.0
+## 
+## locale:
+##  [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
+##  [3] LC_TIME=de_DE.UTF-8        LC_COLLATE=en_US.UTF-8    
+##  [5] LC_MONETARY=de_DE.UTF-8    LC_MESSAGES=en_US.UTF-8   
+##  [7] LC_PAPER=de_DE.UTF-8       LC_NAME=C                 
+##  [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+## [11] LC_MEASUREMENT=de_DE.UTF-8 LC_IDENTIFICATION=C       
+## 
+## attached base packages:
+## [1] grid      stats     graphics  grDevices utils     datasets  methods  
+## [8] base     
+## 
+## other attached packages:
+##  [1] cowplot_1.1.1        showtext_0.9-5       showtextdb_3.0      
+##  [4] sysfonts_0.8.8       ggsci_3.0.0          scales_1.2.1        
+##  [7] R.utils_2.12.2       R.oo_1.25.0          R.methodsS3_1.8.2   
+## [10] data.table_1.14.8    callr_3.7.3          torch_0.9.1         
+## [13] png_0.1-7            gtable_0.3.2         gridExtra_2.3       
+## [16] reticulate_1.26      keras_2.11.0         cli_3.6.0           
+## [19] ggplot2_3.4.1        innsight_0.2.0       neuralnet_1.44.2    
+## [22] palmerpenguins_0.1.1
+## 
+## loaded via a namespace (and not attached):
+##  [1] Rcpp_1.0.10       here_1.0.1        lattice_0.20-45   ps_1.7.2         
+##  [5] zeallot_0.1.0     rprojroot_2.0.3   utf8_1.2.3        mime_0.12        
+##  [9] R6_2.5.1          backports_1.4.1   evaluate_0.18     highr_0.9        
+## [13] pillar_1.8.1      tfruns_1.5.1      rlang_1.1.0       whisker_0.4      
+## [17] Matrix_1.5-3      checkmate_2.1.0   textshaping_0.3.6 labeling_0.4.2   
+## [21] stringr_1.5.0     bit_4.0.5         munsell_0.5.0     compiler_4.2.3   
+## [25] xfun_0.35         pkgconfig_2.0.3   systemfonts_1.0.4 base64enc_0.1-3  
+## [29] tensorflow_2.11.0 tidyselect_1.2.0  tibble_3.2.0      fansi_1.0.4      
+## [33] dplyr_1.1.0       withr_2.5.0       commonmark_1.8.1  rappdirs_0.3.3   
+## [37] jsonlite_1.8.3    lifecycle_1.0.3   magrittr_2.0.3    coro_1.0.3       
+## [41] stringi_1.7.8     farver_2.1.1      ragg_1.2.4        generics_0.1.3   
+## [45] vctrs_0.6.0       tools_4.2.3       bit64_4.0.5       glue_1.6.2       
+## [49] markdown_1.4      processx_3.8.0    parallel_4.2.3    colorspace_2.1-0 
+## [53] knitr_1.41
+</code></pre>
+<pre><code class="language-r">time_diff &lt;- round(difftime(Sys.time(), start_time, units = &quot;mins&quot;), 2)
+cat(&quot;\nTotal execution time: &quot;, col_blue(time_diff), &quot; mins\n&quot;)
+</code></pre>
+<pre><code>## 
+## Total execution time:  42.89  mins
+</code></pre>
+
+
+<script src="https://cdn.jsdelivr.net/combine/npm/@xiee/utils/js/center-img.min.js" async></script>
+</body>
+
+</html>
