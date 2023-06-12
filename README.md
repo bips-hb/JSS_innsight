@@ -31,7 +31,7 @@ Figures 12 (a) and (b), 14, 15, 16, 17, 18.
 
 * The R script `Appendix_B` contains the code to reproduce the differences 
 between **innsight** and **innvestigate** explained in Appendix B for the 
-LRP $\alpha$-$\beta$-rule when a bias vector occurs in the model.
+LRP &alpha;-&beta;-rule when a bias vector occurs in the model.
 
 After one of these scripts has been executed, the respective Figures are 
 saved in the folder `figures`.
@@ -169,7 +169,7 @@ paper and places them in the folder `figures/`.
 ## Appendix B
 
 The R script demonstrates the differences between **innsight** and **innvestigate** 
-in the LRP $\alpha$-$\beta$-rule, which is explained in more detail in the paper 
+in the LRP &alpha;-&beta;-rule, which is explained in more detail in the paper 
 in Appendix B. Run the following code
 
 ```
