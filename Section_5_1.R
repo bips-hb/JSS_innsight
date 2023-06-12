@@ -140,6 +140,9 @@ p <- ggplot(res_error[res_error$method_grp %in% c("Gradient-based"), ]) +
     legend.position = "top",
     legend.spacing.x = unit(8, 'pt'),
     text = element_text(family = "LModern_math", size = 15))
+
+# Show and save plot
+p
 ggsave("figures/FIGURE_10_a.pdf", p, width = 5, height = 5)
 
 # DeepLift (FIGURE 10 (b))
@@ -158,6 +161,9 @@ p <- ggplot(res_error[res_error$method_grp %in% c("DeepLift"), ]) +
   theme(legend.position="top",
         legend.spacing.x = unit(8, 'pt'),
         text = element_text(family="LModern_math", size = 15))
+
+# Show and save plot
+p
 ggsave("figures/FIGURE_10_b.pdf", p, width = 5, height = 5)
 
 # LRP (FIGURE 10 (c))
@@ -177,6 +183,9 @@ p <- ggplot(res_error[res_error$method_grp %in% c("LRP"), ]) +
   scale_fill_manual(values = pal_npg(c("nrc"), 1)(7)[5:7],
                     labels = c("simple rule", expression(epsilon*"-rule"),
                                expression(alpha*"-"*beta*"-rule")))
+
+# Show and save plot
+p
 ggsave("figures/FIGURE_10_c.pdf", p, width = 5, height = 5)
 
 ################################################################################

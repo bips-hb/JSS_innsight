@@ -216,6 +216,7 @@ create_plots <- function(res, var_name) {
                  rel_heights = c(0.05,1,1,1),
                  labels = c("", "a)", "b)", "c)"))
 
+  plot(p)
   ggsave(paste0("figures/", file_name, ".pdf"), p,
          width = 14, height = 16)
 }
@@ -365,6 +366,7 @@ create_figure_plot <- function(res, var_name) {
 
   p <- plot_grid(legend, p, ncol = 1, rel_heights = c(0.075,1))
 
+  plot(p)
   ggsave(paste0("figures/", file_name, ".pdf"), p,
          width = 13, height = 4.5)
 }

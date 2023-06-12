@@ -13,6 +13,7 @@ library("innsight")
 library("ggplot2")
 library("keras")
 library("cli")
+library("gridExtra")
 
 # Make sure TensorFlow is installed
 if (!is_keras_available()) stop("Call `keras::install_keras()`")
