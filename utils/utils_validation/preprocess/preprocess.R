@@ -16,7 +16,9 @@ preprocess <- function(num_models, config, src_dir = "tmp") {
                            "/results*")), recursive = TRUE)
 
   # create directory
-  dir.create(src_dir, showWarnings = FALSE)
+  if (!dir.exists(src_dir)) {
+    dir.create(src_dir, recursive = TRUE)
+  }
 
   # ------- Create model config -----------------------------------------------
   cli_progress_step("Creating model configuration file")
@@ -145,7 +147,9 @@ create_keras_models <- function(config, src_dir) {
 
 generate_inputs <- function(config, src_dir) {
   set.seed(42)
-  dir.create(paste0(src_dir, "/inputs"))
+  if (!dir.exists(paste0(src_dir, "/inputs"))) {
+    dir.create(paste0(src_dir, "/inputs"), recursive = TRUE)
+  }
 
   for (shape in unique(config$input_shape)) {
     # channels last

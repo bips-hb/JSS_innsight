@@ -263,8 +263,8 @@ create_figure_plot <- function(res, var_name) {
                     hidden_depth = "Number of hidden layers")
 
   file_name <- switch(var_name,
-                      num_outputs = "FIGURE_12_a",
-                      hidden_depth = "FIGURE_12_b")
+                      hidden_depth = "FIGURE_12_a",
+                      num_outputs = "FIGURE_12_b")
 
   res$batch_size <- unlist(lapply(res$input_shape, function(a) a[[1]]))
   res$num_inputs <- unlist(lapply(res$input_shape, function(a) a[[2]]))

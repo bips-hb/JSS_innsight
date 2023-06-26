@@ -1,50 +1,57 @@
 
 # Interpreting Deep Neural Networks with the Package `innsight`
 
-This repository can be used to reproduce the results and figures from the 
-paper *"Interpreting Deep Neural Networks with the Package innsight"* submitted 
-for the Journal of Statistical Software (JSS). It is structured as follows:
+This repository can be used to reproduce the results and figures from the paper
+*"Interpreting Deep Neural Networks with the Package innsight"* submitted for
+the Journal of Statistical Software (JSS). All results can be reproduced with
+the R script. Nevertheless, the script `reproduction_material.R` is structured
+into the individual sections of the paper, which can also be executed
+individually after a successful execution of the script's preamble. It includes:
 
-* The R script `Section_4_1.R` covers the example with the penguin dataset 
+* Section 4.1: The R code for the example with the penguin dataset 
 (only numerical input variables) and reproduces the Figures 7 (a) and (b).
 
-* The R script `Section_4_2.R` covers the example with the melanoma dataset
+* Section 4.2: The R code for the example with the melanoma dataset
 (images and tabular inputs) and reproduces the Figures 9 (a) and (b). In this
 code the weights of an already trained model are used, which are stored in the
 folder `additional_files/`. How exactly the model was trained is explained in 
 the folder `Melanoma_model_training/`, but requires considerable computer 
 power due to the size of the model.
 
-* The R script `Section_5_1.R` includes the simulation study of the implemented 
+* Section 5.1: It includes the simulation study of the implemented 
 feature attribution methods regarding the correctness compared with
 the reference implementations [**captum**](https://captum.ai/), 
 [**zennit**](https://github.com/chr5tphr/zennit), [**innvestigate**](https://github.com/albermax/innvestigate), and 
 [**deeplift**](https://github.com/kundajelab/deeplift). It reproduces the
 Figures 10 (a) - (c).
 
-* The R script `Section_5_2_and_Appendix_A.R` includes the simulation study of 
+* Section 5.2: It includes the simulation study of 
 the implemented feature attribution methods regarding the runtime compared with
 the reference implementations [**captum**](https://captum.ai/), 
 [**zennit**](https://github.com/chr5tphr/zennit), [**innvestigate**](https://github.com/albermax/innvestigate), and 
 [**deeplift**](https://github.com/kundajelab/deeplift). It reproduces the
 Figures 12 (a) and (b), 14, 15, 16, 17, 18.
 
-* The R script `Appendix_B` contains the code to reproduce the differences 
+* Appendix B: The code to reproduce the differences 
 between **innsight** and **innvestigate** explained in Appendix B for the 
 LRP $\alpha$-$\beta$-rule when a bias vector occurs in the model.
 
-After one of these scripts has been executed, the respective Figures are 
-saved in the folder `figures`.
+After one of these (sub-)scripts has been executed, the respective Figures are 
+saved in the folder `figures/`.
 
-Since each reference implementation has different constraints on the 
-provided deep learning library and the available packages, the computations 
-occur in separated conda environments with the required packages and package 
-versions. These conda environments can be created using the R script
-`utils/create_condaenvs.R` and are essential for reproducing the 
-results. However, the first time you run the code that requires the 
-environments, you will be asked if you want to install them.
+Since each reference implementation has different constraints on the provided
+deep learning library and the available packages, the computations occur in
+separated conda environments with the required packages and package versions.
+These conda environments are created in the preabmble of the R script using the
+R script `utils/create_condaenvs.R` and are essential for reproducing the
+results. However, the first time you run the code, you will be asked if you want
+to install them.
 
 ## Reproduction of the results
+
+Before executing any subsection from the R script `reproduction_material.R`, 
+make sure that the requirement section has been executed previously and that 
+the required packages and Conda environments are present.
 
 ### 4.1. Example 1: Penguin dataset
 
@@ -52,11 +59,8 @@ In the first example, the penguin dataset provided by the
 [**palmerpenguins**](https://allisonhorst.github.io/palmerpenguins/) 
 package is used and a neural network consisting of a dense layer is trained 
 using the [**neuralnet**](https://cran.r-project.org/web/packages/neuralnet/neuralnet.pdf) 
-package. To reproduce the results from the paper, run the R script `Section_4_1.R`:
-
-```
-Rscript Section_4_1.R
-```
+package. To reproduce the results from the paper, run the corresponding section 
+in the R script `reproduction_material.R`.
 
 The Figures 7 (a) and (b) used in the paper are then saved in the folder `figures/`.
 
@@ -79,11 +83,8 @@ neural network and complicated high-dimensional data, the definition and
 training of the model is explained in more detail in the folder 
 `Melanoma_model_training/`. To reproduce the results, the weights of the 
 model stored at `additional_files/melanoma_model.h5` are 
-loaded and used. Then, execute the following R-script:
-
-```
-Rscript Section_4_2.R
-```
+loaded and used. To reproduce the results from the paper, run the corresponding section 
+in the R script `reproduction_material.R`.
 
 This creates the images for Figure 9 from the paper and places them in 
 the folder `figures/`.
@@ -101,11 +102,8 @@ implementations **zennit**, **captum**, **innvestigate** and **deeplift**
 in terms of correctness of results and runtime on a simulation study with 
 shallow untrained models. Each of these simulations takes quite a bit of 
 time. The exact details of this simulation can be found in the paper and the 
-simulation is run to reproduce the results with the following command:
-
-```
-Rscript Section_5_1.R
-```
+simulation is run to reproduce the results with the  corresponding section 
+in the R script `reproduction_material.R`.
 
 **Note:** Since this simulation takes a lot of time, it can be significantly 
 reduced if fewer models than $50$ are created per architecture. This can be 
@@ -122,12 +120,8 @@ the folder `figures/`.
   <img src="figures/FIGURE_10_c-1.png" width="32%" />
 </p>
 
-To start the simulation for the time measurement the following R script must 
-be executed:
-
-```
-Rscript Section_5_2_and_Appendix_A.R
-```
+To start the simulation for the time measurement the corresponding section 
+in the R script `reproduction_material.R` must be executed.
 
 **Note:** Since this simulation takes a lot of time, it can be significantly 
 reduced if fewer models than $20$ are created per architecture. This can be 
@@ -170,13 +164,10 @@ paper and places them in the folder `figures/`.
 
 The R script demonstrates the differences between **innsight** and **innvestigate** 
 in the LRP $\alpha$-$\beta$-rule, which is explained in more detail in the paper 
-in Appendix B. Run the following code
+in Appendix B. Run the corresponding section in the R script `reproduction_material.R`
+for a reproduction.
 
-```
-Rscript Appendix_B.R
-```
-
-that outputs
+That outputs
 
 ```r
 ── Results ─────────────────────────────────────────────────────────────────────
