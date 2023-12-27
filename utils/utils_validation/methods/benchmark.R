@@ -1,19 +1,23 @@
 
 PKG_METHODS <- list(
   zennit = c("Gradient", "GradxInput", "SmoothGrad", "LRP (simple)",
-             "LRP (epsilon)", "LRP (alpha-beta)"),
+             "LRP (epsilon)", "LRP (alpha-beta)", "IntegratedGradient"),
   captum = c("Gradient", "GradxInput", "SmoothGrad", "LRP (simple)",
-             "LRP (epsilon)", "DeepLift (rescale)"),
-  innvestigate = c("Gradient", "GradxInput", "LRP (simple)",
+             "LRP (epsilon)", "DeepLift (rescale)", "IntegratedGradient",
+             "DeepSHAP", "ExpectedGradient"),
+  innvestigate = c("Gradient", "GradxInput", "LRP (simple)", # "IntegratedGradient",
                    "LRP (epsilon)", "LRP (alpha-beta)"),
   deeplift = c("Gradient", "GradxInput", "DeepLift (rescale)",
-               "DeepLift (reveal-cancel)"),
+               "DeepLift (reveal-cancel)", "IntegratedGradient"),
   innsight_keras = c("Gradient", "GradxInput", "SmoothGrad", "LRP (simple)",
                      "LRP (epsilon)", "LRP (alpha-beta)", "DeepLift (rescale)",
-                     "DeepLift (reveal-cancel)"),
+                     "DeepLift (reveal-cancel)", "IntegratedGradient",
+                     "DeepSHAP", "ExpectedGradient"),
   innsight_torch = c("Gradient", "GradxInput", "SmoothGrad", "LRP (simple)",
                      "LRP (epsilon)", "LRP (alpha-beta)", "DeepLift (rescale)",
-                     "DeepLift (reveal-cancel)")
+                     "DeepLift (reveal-cancel)", "IntegratedGradient",
+                     "DeepSHAP", "ExpectedGradient"),
+  shap = c("DeepSHAP", "ExpectedGradient")
 )
 
 LRP_RULE_SPEC <- list(
@@ -109,16 +113,39 @@ benchmark <- function(methods, model_config, show = FALSE, src_dir = "tmp", n_cp
                 model_config = model_config[model_config$api == "keras", ],
                 src_dir = src_dir, n_cpu = n_cpu),
     show = show, spinner = FALSE)
+
+  # Benchmark innsight vs shap -----------------------------------------
+  cli_h3("Benchmarking {.pkg innsight} vs. {.pkg shap}")
+  cli_progress_step("Calculating {.pkg innsight}")
+  res_innsight <- r(
+    apply_benchmark,
+    args = list(pkg = "innsight_torch", methods = methods, ref_pkg = "shap",
+                model_config = model_config[model_config$api == "torch", ],
+                src_dir = src_dir, n_cpu = n_cpu),
+    show = show, spinner = FALSE)
+  cli_progress_step("Calculating {.pkg shap}")
+  res_shap <- r(
+    apply_benchmark,
+    args = list(pkg = "shap", methods = methods, ref_pkg = "innsight_torch",
+                model_config = model_config[model_config$api == "torch", ],
+                src_dir = src_dir, n_cpu = n_cpu),
+    show = show, spinner = FALSE)
   cli_progress_cleanup()
 
   result <- get_results(src_dir)
 
 
   # Set the order
-  result[[1]]$method_grp[result[[1]]$method_grp == "Gradient"] <- "Gradient-based"
-  result[[2]]$method_grp[result[[2]]$method_grp == "Gradient"] <- "Gradient-based"
+  result[[1]]$method_grp[result[[1]]$method_grp %in% c("Gradient", "IntegratedGradient")] <- "Gradient-based"
+  result[[2]]$method_grp[result[[2]]$method_grp %in% c("Gradient", "IntegratedGradient")] <- "Gradient-based"
+  result[[1]]$method_grp[result[[1]]$method_grp %in% c("ExpectedGradient", "SmoothGrad")] <- "Permutation-based"
+  result[[2]]$method_grp[result[[2]]$method_grp %in% c("ExpectedGradient", "SmoothGrad")] <- "Permutation-based"
+  result[[1]]$method_grp[result[[1]]$method_grp == "DeepSHAP"] <- "DeepLift"
+  result[[2]]$method_grp[result[[2]]$method_grp == "DeepSHAP"] <- "DeepLift"
   result[[1]]$bias <- ifelse(result[[1]]$bias, "with bias", "no bias")
   result[[2]]$bias <- ifelse(result[[2]]$bias, "with bias", "no bias")
+  result[[1]]$pooling <- ifelse(result[[1]]$pooling == "max", "max pooling", "no/avg. pooling")
+  result[[2]]$pooling <- ifelse(result[[2]]$pooling == "max", "max pooling", "no/avg. pooling")
   result[[1]]$method <- factor(result[[1]]$method,
                                levels = unique(result[[1]]$method))
   result[[2]]$method <- factor(result[[2]]$method,
@@ -130,11 +157,88 @@ benchmark <- function(methods, model_config, show = FALSE, src_dir = "tmp", n_cp
   result
 }
 
+benchmark_time <- function(methods, model_config, show = FALSE, src_dir = "tmp", n_cpu = 1) {
+  library(callr)
+  library(cli)
+
+  if (!dir.exists(paste0(src_dir, "/results"))) {
+    dir.create(paste0(src_dir, "/results"))
+  }
+
+  cli_h1("Bechmarking for time")
+
+  # Benchmark innsight (torch models) ------------------------------------------
+  cli_progress_step("Calculating {.pkg innsight} for {.pkg torch} models")
+  res_innsight <- r(
+    apply_benchmark,
+    args = list(pkg = "innsight_torch", methods = methods, ref_pkg = "innsight_torch",
+                model_config = model_config[model_config$api == "torch", ],
+                rule_spec = LRP_RULE_SPEC$innvestigate, src_dir = src_dir, n_cpu = n_cpu),
+    show = show, spinner = FALSE)
+
+  # Benchmark innsight (keras models) ------------------------------------------
+  cli_progress_step("Calculating {.pkg innsight} for {.pkg keras} models")
+  res_innsight <- r(
+    apply_benchmark,
+    args = list(pkg = "innsight_keras", methods = methods, ref_pkg = "innsight_keras",
+                model_config = model_config[model_config$api == "keras", ],
+                rule_spec = LRP_RULE_SPEC$innvestigate, src_dir = src_dir, n_cpu = n_cpu),
+    show = show, spinner = FALSE)
+
+  # Benchmark zennit -----------------------------------------------------------
+  cli_progress_step("Calculating {.pkg zennit}")
+  res_zennit <- r(
+    apply_benchmark,
+    args = list(pkg = "zennit", methods = methods, ref_pkg = "innsight_torch",
+                model_config = model_config[model_config$api == "torch", ],
+                src_dir = src_dir, n_cpu = n_cpu),
+    show = show, spinner = FALSE)
+
+  # Benchmark captum -----------------------------------------------------------
+  cli_progress_step("Calculating {.pkg captum}")
+  res_captum <- r(
+    apply_benchmark,
+    args = list(pkg = "captum", methods = methods, ref_pkg = "innsight_torch",
+                model_config = model_config[model_config$api == "torch", ],
+                src_dir = src_dir, n_cpu = n_cpu),
+    show = show, spinner = FALSE)
+
+  # Benchmark innvestigate -----------------------------------------------------
+  cli_progress_step("Calculating {.pkg innvestigate}")
+  res_innvestigate <- r(
+    apply_benchmark,
+    args = list(pkg = "innvestigate", methods = methods, ref_pkg = "innsight_keras",
+                model_config = model_config[model_config$api == "keras", ],
+                src_dir = src_dir, n_cpu = n_cpu),
+    show = show, spinner = FALSE)
+
+  # Benchmark deeplift ---------------------------------------------------------
+  cli_progress_step("Calculating {.pkg deeplift}")
+  res_deeplift <- r(
+    apply_benchmark,
+    args = list(pkg = "deeplift", methods = methods, ref_pkg = "innsight_keras",
+                model_config = model_config[model_config$api == "keras", ],
+                src_dir = src_dir, n_cpu = n_cpu),
+    show = show, spinner = FALSE)
+
+  # Benchmark shap ---------------------------------------------------------
+  cli_progress_step("Calculating {.pkg shap}")
+  res_shap <- r(
+    apply_benchmark,
+    args = list(pkg = "shap", methods = methods, ref_pkg = "innsight_torch",
+                model_config = model_config[model_config$api == "torch", ],
+                src_dir = src_dir, n_cpu = n_cpu),
+    show = show, spinner = FALSE)
+  cli_progress_cleanup()
+
+  NULL
+}
+
 apply_benchmark <- function(pkg, methods, model_config, ref_pkg,
                             rule_spec = NULL, src_dir = "models", n_cpu = 1) {
   library(data.table)
   library(cli)
-  set.seed(42)
+  set.seed(11)
   cli_text("")
 
   # Disable GPU usage
@@ -169,8 +273,11 @@ apply_benchmark <- function(pkg, methods, model_config, ref_pkg,
         func <- switch(d_method$m_group,
                        Gradient = apply_Gradient,
                        SmoothGrad = apply_SmoothGrad,
+                       IntegratedGradient = apply_IntegratedGradient,
                        LRP = apply_LRP,
-                       DeepLift = apply_DeepLift)
+                       DeepLift = apply_DeepLift,
+                       DeepSHAP = apply_DeepSHAP,
+                       ExpectedGradient = apply_ExpectedGradient)
 
         # Add rule specifications
         if (d_method$m_group == "LRP") {
@@ -192,7 +299,7 @@ apply_benchmark <- function(pkg, methods, model_config, ref_pkg,
         # Load model/model_path ------------------------------------------------
         if (pkg %in% c("innvestigate", "deeplift")) {
           model <- paste0(src_dir, "/models/", config_i$model_name)
-        } else if (pkg %in% c("zennit", "captum")) {
+        } else if (pkg %in% c("zennit", "captum", "shap")) {
           model <- load_pytorch_model(config_i, src_dir)
         } else if (pkg == "innsight_torch") {
           res <- load_torch_model(config_i, src_dir)
@@ -220,8 +327,8 @@ apply_benchmark <- function(pkg, methods, model_config, ref_pkg,
           inputs_ref <- readRDS(paste0(src_dir, "/inputs/input_ref_", shape, "_first.rds"))
         }
 
-        # add reference value for DeepLift
-        if (startsWith(method, "DeepLift")) {
+        # add reference value for DeepLift and IntegratedGradient
+        if (any(startsWith(method, c("DeepLift", "IntegratedGradient", "DeepSHAP", "ExpectedGradient")))) {
           if (func_args$x_ref == "zeros") {
             func_args$x_ref <- inputs_ref * 0
           } else if (func_args$x_ref == "norm") {
@@ -243,6 +350,7 @@ apply_benchmark <- function(pkg, methods, model_config, ref_pkg,
                         convert_time = NA, result = array(NA))
             res
           })
+
         # Add results in data.table
         result[i, "time_total"] <- res$total_time
         result[i, "time_eval"] <- res$eval_time
@@ -303,6 +411,35 @@ deparse_method <- function(method) {
         times_input = FALSE,
         n = as.numeric(args[[2]]),
         noise_level = as.numeric(args[[3]])
+      )
+    )
+  } else if (startsWith(method, "Integrated")) {
+    res <- list(
+      m_group = "IntegratedGradient",
+      method = paste0(args[[1]]),
+      m_arg = paste0(args[2:3], collapse = "-"),
+      func_args = list(
+        n = as.numeric(args[[2]]),
+        x_ref = args[[3]]
+      )
+    )
+  } else if (startsWith(method, "DeepSHAP")) {
+    res <- list(
+      m_group = "DeepSHAP",
+      method = paste0(args[[1]]),
+      m_arg = "",
+      func_args = list(
+        x_ref = "norm"
+      )
+    )
+  } else if (startsWith(method, "Expected")) {
+    res <- list(
+      m_group = "ExpectedGradient",
+      method = paste0(args[[1]]),
+      m_arg = paste0(args[[2]]),
+      func_args = list(
+        n = as.numeric(args[[2]]),
+        x_ref = "norm"
       )
     )
   }
@@ -421,7 +558,7 @@ get_results <- function(src_dir) {
   res_error <- data.table()
   res_time <- data.table()
 
-  pkgs <- c("zennit", "captum", "innvestigate", "deeplift")
+  pkgs <- c("zennit", "captum", "innvestigate", "deeplift", "shap")
   for (pkg in pkgs) {
     res <-
       lapply(
@@ -511,7 +648,7 @@ load_conda_envs <- function(pkg, n_cpu = 1) {
     capture.output(
       {
         Sys.setenv(TF_CPP_MIN_LOG_LEVEL = "3")
-        if (pkg %in% c("zennit", "captum")) {
+        if (pkg %in% c("zennit", "captum", "shap")) {
           reticulate::use_condaenv("JSS_innsight_pytorch")
           import_torch <- reticulate::import("torch")
           import_torch$set_num_threads(as.integer(n_cpu))

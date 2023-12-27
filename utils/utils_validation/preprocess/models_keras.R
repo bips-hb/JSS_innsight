@@ -72,7 +72,7 @@ get_2D_model <- function(shape, name, save = TRUE, act_name = "relu",
       layer_conv_2d(filters = width,
                     strides = strides,
                     padding = padding,
-                    kernel_size = c(4,4),
+                    kernel_size = c(5,5),
                     activation = if (bn == "before_act") "linear" else act_name,
                     bias_initializer = "glorot_uniform", use_bias = bias)
 

@@ -21,16 +21,16 @@ power due to the size of the model.
 * Section 5.1: It includes the simulation study of the implemented 
 feature attribution methods regarding the correctness compared with
 the reference implementations [**captum**](https://captum.ai/), 
-[**zennit**](https://github.com/chr5tphr/zennit), [**innvestigate**](https://github.com/albermax/innvestigate), and 
-[**deeplift**](https://github.com/kundajelab/deeplift). It reproduces the
+[**zennit**](https://github.com/chr5tphr/zennit), [**innvestigate**](https://github.com/albermax/innvestigate), 
+[**deeplift**](https://github.com/kundajelab/deeplift), and [**shap**](https://github.com/shap/shap). It reproduces the
 Figures 10 (a) - (c).
 
 * Section 5.2: It includes the simulation study of 
 the implemented feature attribution methods regarding the runtime compared with
 the reference implementations [**captum**](https://captum.ai/), 
-[**zennit**](https://github.com/chr5tphr/zennit), [**innvestigate**](https://github.com/albermax/innvestigate), and 
-[**deeplift**](https://github.com/kundajelab/deeplift). It reproduces the
-Figures 12 (a) and (b), 14, 15, 16, 17, 18.
+[**zennit**](https://github.com/chr5tphr/zennit), [**innvestigate**](https://github.com/albermax/innvestigate), 
+[**deeplift**](https://github.com/kundajelab/deeplift), and [**shap**](https://github.com/shap/shap). It reproduces the
+Figures 11 (a) and (b), 14, 15, 16, 17, 18.
 
 * Appendix B: The code to reproduce the differences 
 between **innsight** and **innvestigate** explained in Appendix B for the 
@@ -66,8 +66,8 @@ The Figures 7 (a) and (b) used in the paper are then saved in the folder `figure
 
 **Figure 7**
 <p float="left">
-  <img src="figures/FIGURE_7_a-1.png" width="49%" />
-  <img src="figures/FIGURE_7_b-1.png" width="49%" /> 
+  <img src="figures/png/FIGURE_7_a-1.png" width="49%" />
+  <img src="figures/png/FIGURE_7_b-1.png" width="49%" /> 
 </p>
 
 ### 4.2. Example 2: Melanoma dataset
@@ -91,14 +91,14 @@ the folder `figures/`.
 
 **Figure 9**
 <p float="left">
-  <img src="figures/FIGURE_9_a-1.png" width="35%" />
-  <img src="figures/FIGURE_9_b-1.png" width="64%" /> 
+  <img src="figures/png/FIGURE_9_a-1.png" width="35%" />
+  <img src="figures/png/FIGURE_9_b-1.png" width="64%" /> 
 </p>
 
 ### 5. Validation and runtime
 
 In the paper, our package **innsight** was evaluated with the reference 
-implementations **zennit**, **captum**, **innvestigate** and **deeplift** 
+implementations **zennit**, **captum**, **innvestigate**, **shap** and **deeplift** 
 in terms of correctness of results and runtime on a simulation study with 
 shallow untrained models. Each of these simulations takes quite a bit of 
 time. The exact details of this simulation can be found in the paper and the 
@@ -115,9 +115,9 @@ the folder `figures/`.
 
 **Figure 10**
 <p float="left">
-  <img src="figures/FIGURE_10_a-1.png" width="32%" />
-  <img src="figures/FIGURE_10_b-1.png" width="32%" /> 
-  <img src="figures/FIGURE_10_c-1.png" width="32%" />
+  <img src="figures/png/FIGURE_10_a-1.png" width="32%" />
+  <img src="figures/png/FIGURE_10_b-1.png" width="32%" /> 
+  <img src="figures/png/FIGURE_10_c-1.png" width="32%" />
 </p>
 
 To start the simulation for the time measurement the corresponding section 
@@ -130,14 +130,14 @@ the step size of the varying parameter can also be lowered, e.g., for the
 number of hidden layers, set `c(2, 25, 50)` instead of `c(2, seq(5, 50, by = 5))`.
 (By default, the script uses a minimal time-consuming setting)
 
-This creates the images for Figure 12 (a) and (b), 14, 15, 16, 17 and 18 from the
+This creates the images for Figure 11 (a) and (b), 14, 15, 16, 17 and 18 from the
 paper and places them in the folder `figures/`.
 
-**Figure 12 (a)**
-![](figures/FIGURE_12_a-1.png "Fig. 12 (a)") 
+**Figure 11 (a)**
+![](figures/png/FIGURE_11_a-1.png "Fig. 11 (a)") 
 
-**Figure 12 (b)**
-![](figures/FIGURE_12_b-1.png "Fig. 12 (b)")
+**Figure 11 (b)**
+![](figures/png/FIGURE_11_b-1.png "Fig. 11 (b)")
 
 
 <details>
@@ -145,19 +145,19 @@ paper and places them in the folder `figures/`.
 <br>
 
 **Figure 14**
-![](figures/FIGURE_14-1.png "Fig. 14")
+![](figures/png/FIGURE_14-1.png "Fig. 14")
 
 **Figure 15**
-![](figures/FIGURE_15-1.png "Fig. 15")
+![](figures/png/FIGURE_15-1.png "Fig. 15")
 
 **Figure 16**
-![](figures/FIGURE_16-1.png "Fig. 16")
+![](figures/png/FIGURE_16-1.png "Fig. 16")
 
 **Figure 17**
-![](figures/FIGURE_17-1.png "Fig. 17")
+![](figures/png/FIGURE_17-1.png "Fig. 17")
 
 **Figure 18**
-![](figures/FIGURE_18-1.png "Fig. 18")
+![](figures/png/FIGURE_18-1.png "Fig. 18")
 </details>
 
 ## Appendix B

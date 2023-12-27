@@ -49,6 +49,53 @@ def apply_Gradient(model_path, inputs, func_args = None, num_outputs = int(1), n
   return summary
 
 ###############################################################################
+#                       innvestigate: IntegratedGradient
+###############################################################################
+
+def apply_IntegratedGradient(model_path, inputs, func_args = None, num_outputs = int(1), n_cpu = int(1)):
+
+  # Load required packages
+  import tensorflow as tf
+  import keras as k
+  import innvestigate
+  import innvestigate.utils as iutils
+  import numpy as np
+  import time
+  
+  tf.compat.v1.disable_eager_execution()
+  k.backend.clear_session()
+  config = tf.compat.v1.ConfigProto(intra_op_parallelism_threads = int(n_cpu),
+                                     inter_op_parallelism_threads = int(n_cpu))
+  session = tf.compat.v1.Session(config=config)
+  tf.compat.v1.keras.backend.set_session(session)
+
+  # Load model
+  model = k.models.load_model(model_path, compile = False)
+  
+  # Get baseline value
+  baseline = func_args['x_ref'][[0]]
+  
+  start_time = time.time()
+  analyzer = innvestigate.create_analyzer("integrated_gradients", model, neuron_selection_mode = 'index', steps = int(func_args['n']), reference_inputs = baseline)
+  convert_time = time.time() - start_time
+
+  input_time = time.time()
+  result = list()
+  for i in range(int(num_outputs)):
+    result.append(analyzer.analyze(inputs, neuron_selection = int(i)))
+  result = analyzer.analyze(inputs)
+  end_time = time.time()
+
+  summary = {
+    "total_time": end_time - start_time,
+    "eval_time": end_time - input_time,
+    "convert_time": convert_time,
+    "result": np.stack(result, axis = -1)
+  }
+
+  return summary
+
+###############################################################################
 #                       innvestigate: SmoothGrad
 ###############################################################################
 def apply_SmoothGrad(model_path, inputs, func_args = None, num_outputs = int(1), n_cpu = int(1)):

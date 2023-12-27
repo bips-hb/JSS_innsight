@@ -5,6 +5,9 @@
 #
 ################################################################################
 
+# All code-based figures and results of the paper are generated with the
+# following script and saved in the folder `figures/`.
+
 ################################################################################
 #
 #               GENERAL REQUIREMENTS FOR CODE EXECUTION
@@ -67,6 +70,60 @@ if (any(!(required_conda_envs %in% conda_list()$name))) {
 
 ################################################################################
 #
+#                 CODE FOR SECTION 3 ("Bike-sharing dataset")
+#                             FIGURE 5 (a)
+#
+################################################################################
+start_time <- Sys.time()
+
+# Set the seed for reproducibility
+set.seed(42)
+
+# Load the bike-sharing dataset and restrict the dataset to specific numerical
+# or binary variables
+bike <- read.csv("additional_files/bike_sharing/day.csv")
+bike <- bike[, c("cnt", "holiday", "workingday", "temp", "hum", "windspeed")]
+
+# Scale the outcome "cnt" to biks per 10.000 and transform the whole dataset
+# to a numerical matrix
+bike$cnt <- bike$cnt / 10000
+bike <- as.matrix(bike)
+
+# Fit the neural network with one hidden layer and 64 nodes using
+# the package "neuralnet"
+model <- neuralnet(cnt~., data = bike, hidden = c(64), linear.output = TRUE)
+
+# Convert the model and pass the output label
+conv <- convert(model, output_names = c("Number of rented bikes/10.000"))
+
+# Run DeepSHAP for the first 20 instances and use the whole dataset as the
+# reference dataset (by default only 100 samples of this dataset are
+# used for the calculation)
+res <- run_deepshap(conv, bike[1:20, -1], data_ref = bike[, -1])
+
+# Show the results as an array, plot the results for the first data point
+# and show the boxplots for over all 20 instances
+head(get_result(res))
+plot(res)
+boxplot(res, ref_data_idx = 1) +
+  theme(text = element_text(face = "bold"))
+
+# Combine and save the plot
+
+
+p1 <- plot(res)
+p2 <- boxplot(res, ref_data_idx = 1) +
+  theme(text = element_text(face = "bold"))
+
+p <- plot_grid(plot(p1), plot(p2), ncol = 1)
+
+ggplot2::ggsave("figures/FIGURE_5_a.pdf", p, width = 6, height = 6)
+
+time_diff <- round(difftime(Sys.time(), start_time, units = "mins"), 2)
+cat("Total execution time: ", col_blue(time_diff), " mins\n")
+
+################################################################################
+#
 #                 CODE FOR SECTION 4.1 ("Penguin dataset")
 #                     FIGURE 7 (a) AND FIGURE 7 (b)
 #
@@ -93,35 +150,36 @@ model <- neuralnet(species ~ .,
                    err.fct = "ce", linear.output = FALSE)
 
 # Convert the neural network model using the innsight package
-conv <- Converter$new(model)
+conv <- convert(model)
 
-# Apply the LRP method with the alpha-beta-rule (alpha = 2)
-# The output variable (species) must be removed from the test_data
-lrp <- LRP$new(conv, test_data, rule_name = "alpha_beta", rule_param = 2)
+# Apply the IntegratedGradient method with the test dataset's feature mean
+# values as the reference value and 100 steps for the integral approximation.
+intgrad <- run_intgrad(conv, test_data,
+                       x_ref = matrix(colMeans(test_data), 1))
 
 # Plot the relevance scores for two outputs of the neural network model
 # This creates the FIGURE 7(a)
-p <- plot(lrp, data_idx = c(1, 76), output_idx = c(1, 3)) +
+p <- plot(intgrad, data_idx = c(1, 50), output_label = c("Adelie", "Gentoo")) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, vjust = 0.6))
+p
 
 # Save figure
-ggsave("figures/FIGURE_7_a.pdf", print(p), width = 5, height = 5)
+ggsave("figures/FIGURE_7_a.pdf", print(p), width = 6, height = 6)
 
 # Create a box plot of the relevance scores for two outputs of the neural
 # network model using the innsight package
 # This creates the FIGURE 7 (b)
-p <- boxplot(lrp, output_idx = c(1, 3), preprocess_FUN = identity,
-             ref_data_idx = 1) +
+p <- boxplot(intgrad, output_label = c("Adelie", "Gentoo"), ref_data_idx = 1) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, vjust = 0.6))
+p
 
 # Save figure
-ggsave("figures/FIGURE_7_b.pdf", print(p), width = 5, height = 5)
+ggsave("figures/FIGURE_7_b.pdf", print(p), width = 6, height = 6)
 
 time_diff <- round(difftime(Sys.time(), start_time, units = "mins"), 2)
 cat("Total execution time: ", col_blue(time_diff), " mins\n")
-
 
 
 ################################################################################
@@ -148,8 +206,8 @@ input_names <- list(
 output_name <- c("Probability of malignant lesion")
 
 # Create a Converter object for the model
-converter <- Converter$new(model, input_names = input_names,
-                           output_names = output_name)
+converter <- convert(model, input_names = input_names,
+                     output_names = output_name)
 
 # Get input data
 image_files <- c("ISIC_6535558", "ISIC_7291021", "ISIC_0946787")
@@ -178,7 +236,7 @@ df
 # Set the LRP rules and apply the method
 rule_name <- list(Conv2D_Layer = "alpha_beta", Dense_Layer = "epsilon")
 rule_param <- list(Conv2D_Layer = 1.5, Dense_Layer = 0.01)
-res <- LRP$new(converter, inputs, channels_first = FALSE,
+res <- run_lrp(converter, inputs, channels_first = FALSE,
                rule_name = rule_name, rule_param = rule_param)
 
 # Create the S4 'innsight_ggplot2' object (the suggested packages 'gridExtra'
@@ -194,16 +252,14 @@ p[1, 1] <- p[1, 1, restyle = FALSE] +
              labeller = as_labeller(c(Input_1 = "Image input")))
 # Change the facet labels in the plot top right
 p[1, 2] <- p[1, 2, restyle = FALSE] +
-  facet_grid(rows = vars(data),
-             cols = vars(model_input),
-             labeller = as_labeller(c(data_1 = "ISIC_6535558 (87.82%)",
-                                      Input_2 = "Tabular input")))
-# Change the facet labels in the lower right plots and rotate the x-axis labels
-p[2:3, 2] <- p[2:3, 2, restyle = FALSE] +
-  facet_grid(rows = vars(data),
-             labeller = as_labeller(c(data_2 = "ISIC_7291021 (0.05%)",
-                                      data_3 = "ISIC_0946787 (47.47%)"))) +
+  facet_grid(cols = vars(model_input),
+             rows = vars(data),
+             labeller = as_labeller(c(Input_2 = "Tabular input",
+                                      data_1 = "malignant")))
+# Rotate the x-axis labels
+p <- p +
   theme(axis.text.x = element_text(angle = 45, vjust = 0.6))
+
 
 # Plot the modified plot (all additional arguments, e.g. 'heights' are
 # forwarded to the method 'gridExtra::arrangeGrob()')
@@ -249,7 +305,6 @@ time_diff <- round(difftime(Sys.time(), start_time, units = "mins"), 2)
 cat("Total execution time: ", col_blue(time_diff), " mins\n")
 
 
-
 ################################################################################
 #
 #                 CODE FOR SECTION 5.1 ("Validity comparison")
@@ -264,10 +319,10 @@ start_time <- Sys.time()
 # attributes
 
 # Minimal execution (takes only a couple of minutes)
-num_models <- 2
+# num_models <- 1
 
 # Paper execution (takes one day)
-# num_models <- 50
+num_models <- 50
 
 # Load LaTeX font (Latin modern), only relevant for setting the fonts as in the
 # paper, but requires the latinmodern-math font
@@ -279,7 +334,8 @@ showtext_auto()
 # Global settings
 num_outputs <- c(1, 5)
 src_dir <- "tmp_results/5_1_Correctness"
-batch_size <- 32
+batch_size <- 16
+num_refs <- 32
 show <- FALSE # only for debugging
 
 # Define experiment configs
@@ -293,7 +349,7 @@ config_tab = expand.grid(
 
 # models for image data
 config_2D <- expand.grid(
-  input_shape = list(c(batch_size, 10, 10, 3)),
+  input_shape = list(c(batch_size, 32, 32, 3)),
   bias = c(TRUE, FALSE),
   act = c("relu", "tanh"),
   batchnorm = c("none"),
@@ -305,15 +361,16 @@ config <- list(config_tab = config_tab, config_2D = config_2D)
 
 # Define methods to be applied
 methods <- c(
-  "Gradient", "GradxInput",
+  "Gradient", "GradxInput", "IntegratedGradient_20_zeros", "IntegratedGradient_20_norm",
   "LRP_simple_0", "LRP_epsilon_0.01", "LRP_alpha-beta_1", "LRP_alpha-beta_2",
   "DeepLift_rescale_zeros", "DeepLift_rescale_norm",
-  "DeepLift_reveal-cancel_zeros", "DeepLift_reveal-cancel_norm"
+  "DeepLift_reveal-cancel_zeros", "DeepLift_reveal-cancel_norm",
+  "DeepSHAP"
 )
 
 # Generate models
 source("utils/utils_validation/preprocess/preprocess.R")
-model_config <- preprocess(num_models, config, src_dir)
+model_config <- preprocess(num_models, num_refs, config, src_dir)
 
 # Run benchmark ----------------------------------------------------------------
 
@@ -328,6 +385,13 @@ source("utils/utils_validation/utils.R")
 # result with the MAE error
 res_error <- result[[1]]
 
+# Set order of methods
+res_error$method <- factor(res_error$method, levels = c(
+  "Gradient", "GradxInput", "IntegratedGradient",
+  "LRP (simple)", "LRP (epsilon)", "LRP (alpha-beta)",
+  "DeepLift (rescale)", "DeepLift (reveal-cancel)", "DeepSHAP"
+))
+
 # Gradient-based methods (FIGURE 10 (a))
 p <- ggplot(res_error[res_error$method_grp %in% c("Gradient-based"), ]) +
   geom_boxplot(aes(y = error, x = pkg, fill = method),
@@ -336,17 +400,18 @@ p <- ggplot(res_error[res_error$method_grp %in% c("Gradient-based"), ]) +
   facet_grid(cols = vars(method_grp)) +
   scale_y_continuous(trans = log10_with_0_trans(9), limits = c(0, 1e0)) +
   add_gray_box() +
-  scale_fill_manual(values = pal_npg(c("nrc"), 1)(7)[1:2],
-                    labels = c("Gradient", "Gradient\u00D7Input")) +
+  scale_fill_manual(values = pal_npg(c("nrc"), 1)(9)[1:3],
+                    labels = c("Gradient", "Gradient\u00D7Input", "IntegratedGradient")) +
   geom_hline(yintercept = 0, alpha = 0.5) +
-  labs(y = "Mean absolute error (MAE)",
+  labs(y = "Mean absolute difference",
        x = "Package",
        fill = NULL) +
   theme_bw() +
   theme(
     legend.position = "top",
-    legend.spacing.x = unit(8, 'pt'),
-    text = element_text(family = "LModern_math", size = 15))
+    legend.margin = margin(),
+    legend.spacing.x = unit(4, 'pt'),
+    text = element_text(family = "LModern_math", size = 14))
 
 # Show and save plot
 p
@@ -357,17 +422,18 @@ p <- ggplot(res_error[res_error$method_grp %in% c("DeepLift"), ]) +
   geom_boxplot(aes(y = error, x = pkg, fill = method),
                outlier.size = 0.75,
                outlier.alpha = 0.25) +
-  facet_grid(cols = vars(method_grp)) +
+  facet_grid(cols = vars(method_grp), rows = vars(pooling)) +
   scale_y_continuous(trans = log10_with_0_trans(9), limits = c(0, 1e0)) +
   add_gray_box() +
-  scale_fill_manual(values = pal_npg(c("nrc"), 1)(7)[3:4],
-                    labels = c("Rescale", "RevealCancel")) +
+  scale_fill_manual(values = pal_npg(c("nrc"), 1)(9)[4:6],
+                    labels = c("Rescale", "RevealCancel", "DeepSHAP")) +
   geom_hline(yintercept = 0, alpha = 0.5) +
   labs(y = NULL, x = "Package", fill = NULL) +
   theme_bw() +
   theme(legend.position="top",
-        legend.spacing.x = unit(8, 'pt'),
-        text = element_text(family="LModern_math", size = 15))
+        legend.margin = margin(),
+        legend.spacing.x = unit(4, 'pt'),
+        text = element_text(family="LModern_math", size = 14))
 
 # Show and save plot
 p
@@ -385,9 +451,10 @@ p <- ggplot(res_error[res_error$method_grp %in% c("LRP"), ]) +
   labs(y = NULL, x = "Package", fill = NULL) +
   theme_bw() +
   theme(legend.position="top",
-        legend.spacing.x = unit(8, 'pt'),
+        legend.margin = margin(),
+        legend.spacing.x = unit(4, 'pt'),
         text = element_text(family="LModern_math", size = 15))+
-  scale_fill_manual(values = pal_npg(c("nrc"), 1)(7)[5:7],
+  scale_fill_manual(values = pal_npg(c("nrc"), 1)(9)[7:9],
                     labels = c("simple rule", expression(epsilon*"-rule"),
                                expression(alpha*"-"*beta*"-rule")))
 
@@ -399,9 +466,12 @@ ggsave("figures/FIGURE_10_c.pdf", p, width = 5, height = 5)
 cli::cli_h1("Outlier Analysis")
 
 # DeepLift
-outliers_deeplift <- res_error[res_error$method_grp == "DeepLift" & res_error$error > 1e-6]
+outliers_deeplift <- res_error[res_error$method_grp == "DeepLift" &
+                                 !(res_error$method == "DeepSHAP" & res_error$pooling == "max pooling")  &
+                                 res_error$error > 1e-6]
 cli_text("Number (Percentage) of models with hyperbolic tangent as activation ",
-         "among all DeepLift simulations exceeding an error of 1e-6: \n",
+         "among all DeepLift and DeepSHAP (without max pooling) simulations ",
+         "exceeding an error of 1e-6: \n",
          sum(outliers_deeplift$act == "tanh"), " (",
          round(mean(outliers_deeplift$act == "tanh") * 100, 2), "%)")
 
@@ -422,12 +492,13 @@ cat("Total execution time: ", col_blue(time_diff), " mins\n")
 ################################################################################
 #
 #               CODE FOR SECTION 5.2 ("Runtime comparison")
-#                     Figure 12 (a) & (b)
+#                     Figure 11 (a) & (b)
 #             AND ADDITIONAL FIGURES FROM APPENDIX A.3
 #                 Figure 14, 15, 16, 17 & 18
 #
 ################################################################################
 start_time <- Sys.time()
+set.seed(42)
 
 # Load LaTeX font (Latin modern), only relevant for setting the fonts as in the
 # paper, but requires the latinmodern-math font
@@ -441,95 +512,102 @@ showtext_auto()
 # lowered, e.g., for the number of hidden layers, set `c(2, 25, 50)` instead
 # of `c(2, seq(5, 50, by = 5))`.
 
-# Minimal execution
-num_models <- 1
-IMAGE_SHAPES <- lapply(c(10, seq(5) * 80 + 4), function(x) c(x,x,3))
-NUM_OUTPUTS <- c(1, seq(20, 100, by = 20))
-NUM_HIDDEN_LAYERS <- c(2, seq(10, 50, by = 10))
-NUM_HIDDEN_UNITS <- list(c(100, seq(600, 3000, by = 600)), c(10, seq(200, 1000, by = 200)))
-BATCH_SIZES <- c(100, seq(600, 3000, by = 600))
+# # Minimal execution
+# num_models <- 2
+# num_refs <- c(4)
+# IMAGE_SHAPES <- lapply(c(16, seq(4) * 64), function(x) c(x,x,3))
+# NUM_OUTPUTS <- c(1, seq(4, 20, by = 4))
+# NUM_HIDDEN_LAYERS <- c(1, seq(4, 16, by = 4))
+# NUM_HIDDEN_UNITS <- list(c(128, seq(512, 2048, by = 512)), c(10, seq(100, 400, by = 100)))
+# BATCH_SIZES <- list(c(32, seq(128, 512, by = 128)), c(16, seq(64, 256, by = 64)))
+# show <- TRUE # only for debugging
 
 # Paper execution
-#num_models <- 20
-#IMAGE_SHAPES <- lapply(c(10, seq(10) * 40 + 4), function(x) c(x,x,3))
-#NUM_OUTPUTS <- c(1, seq(10, 100, by = 10))
-#NUM_HIDDEN_LAYERS <- c(2, seq(5, 50, by = 5))
-#NUM_HIDDEN_UNITS <- list(c(100, seq(300, 3000, by = 300)), c(10, seq(100, 1000, by = 100)))
-#BATCH_SIZES <- c(100, seq(300, 3000, by = 300))
+num_models <- 20
+num_refs <- c(10)
+IMAGE_SHAPES <- lapply(c(16, seq(10) * 32), function(x) c(x,x,3))
+NUM_OUTPUTS <- c(1, seq(2, 20, by = 2))
+NUM_HIDDEN_LAYERS <- c(1, seq(2, 20, by = 2))
+NUM_HIDDEN_UNITS <- list(c(128, seq(256, 2560, by = 256)), c(10, seq(50, 500, by = 50)))
+BATCH_SIZES <- list(c(32, seq(64, 640, by = 64)), c(16, seq(32, 320, by = 32)))
 
 # Load utility functions
 source("utils/utils_validation/utils_time.R")
 
 
-# Time comparison for image size (FIGURE 18) -----------------------------------
-num_outputs <- c(1)
-num_hidden_layers <- c(2)
-num_hidden_units <- list(c(16), c(5)) # first for tabular (units) and second for image (filters)
-image_shapes <- IMAGE_SHAPES
-batch_sizes <- c(16)
-src_dir <- "tmp_results/5_2_Image_size"
-
-res <- compare_time(num_models, num_outputs, num_hidden_layers,
-                    num_hidden_units, src_dir, batch_sizes,
-                    image_shapes = image_shapes)
-#+ fig.width=14, fig.height=16
-create_plots(res, "num_inputs")
-
-
 # Time comparison for output nodes (FIGURE 12 (b) & 14) ------------------------
+cli_h1("Comparison of output nodes")
 num_outputs <- NUM_OUTPUTS
 num_hidden_layers <- c(2)
-num_hidden_units <- list(c(16), c(5))
+num_hidden_units <- list(c(128), c(5))  # first for tabular (units) and second for image (filters)
 batch_sizes <- c(16)
 src_dir <- "tmp_results/5_2_Num_Outputs"
 
-res <- compare_time(num_models, num_outputs, num_hidden_layers,
-                    num_hidden_units, src_dir, batch_sizes)
-#+ fig.width=14, fig.height=16
+res <- compare_time(num_models, num_refs, num_outputs, num_hidden_layers,
+                    num_hidden_units, src_dir, batch_sizes, show = show)
+#+ fig.width=18, fig.height=16
 create_plots(res, "num_outputs")
-#+ fig.width=14, fig.height=8
+#+ fig.width=18, fig.height=8
 create_figure_plot(res, "num_outputs")
 
 
 # Time comparison for number layers (FIGURE 12 (a) & 15) -----------------------
+cli_h1("Comparison of number of layers")
 num_outputs <- c(1)
 num_hidden_layers <- NUM_HIDDEN_LAYERS
-num_hidden_units <-  list(c(16), c(5))
+num_hidden_units <-  list(c(128), c(5))
 batch_sizes <- c(16)
 src_dir <- "tmp_results/5_2_Num_Layers"
 
-res <- compare_time(num_models, num_outputs, num_hidden_layers,
-                    num_hidden_units, src_dir, batch_sizes)
-#+ fig.width=14, fig.height=16
+res <- compare_time(num_models, num_refs, num_outputs, num_hidden_layers,
+                    num_hidden_units, src_dir, batch_sizes, show = show)
+#+ fig.width=18, fig.height=16
 create_plots(res, "hidden_depth")
-#+ fig.width=14, fig.height=8
+#+ fig.width=18, fig.height=8
 create_figure_plot(res, "hidden_depth")
 
 
 # Time comparison for hidden width (FIGURE 16) ---------------------------------
+cli_h1("Comparison of hidden width")
 num_outputs <- c(1)
 num_hidden_layers <- c(2)
 num_hidden_units <- NUM_HIDDEN_UNITS
 batch_sizes <- c(16)
 src_dir <- "tmp_results/5_2_Num_Units"
 
-res <- compare_time(num_models, num_outputs, num_hidden_layers,
-                    num_hidden_units, src_dir, batch_sizes)
-#+ fig.width=14, fig.height=16
+res <- compare_time(num_models, num_refs, num_outputs, num_hidden_layers,
+                    num_hidden_units, src_dir, batch_sizes, show = show)
+#+ fig.width=18, fig.height=16
 create_plots(res, "hidden_width")
 
 
 # Time comparison for batch_size (FIGURE 17) -----------------------------------
+cli_h1("Comparison of batch size")
 num_outputs <- c(1)
 num_hidden_layers <- c(2)
-num_hidden_units <- list(c(16), c(5))
+num_hidden_units <- list(c(128), c(5))
 batch_sizes <- BATCH_SIZES
 src_dir <- "tmp_results/5_2_Batch_Size"
 
-res <- compare_time(num_models, num_outputs, num_hidden_layers,
-                    num_hidden_units, src_dir, batch_sizes)
-#+ fig.width=14, fig.height=16
+res <- compare_time(num_models, num_refs, num_outputs, num_hidden_layers,
+                    num_hidden_units, src_dir, batch_sizes, show = show)
+#+ fig.width=18, fig.height=16
 create_plots(res, "batch_size")
+
+# Time comparison for image size (FIGURE 18) -----------------------------------
+cli_h1("Comparison of image size")
+num_outputs <- c(1)
+num_hidden_layers <- c(2)
+num_hidden_units <- list(c(128), c(5))
+image_shapes <- IMAGE_SHAPES
+batch_sizes <- c(16)
+src_dir <- "tmp_results/5_2_Image_size"
+
+res <- compare_time(num_models, num_refs, num_outputs, num_hidden_layers,
+                    num_hidden_units, src_dir, batch_sizes,
+                    image_shapes = image_shapes, show = show)
+#+ fig.width=18, fig.height=16
+create_plots(res, "num_inputs")
 
 # Print execution time
 time_diff <- round(difftime(Sys.time(), start_time, units = "mins"), 2)

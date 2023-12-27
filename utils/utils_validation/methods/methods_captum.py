@@ -45,6 +45,128 @@ def apply_Gradient(model, inputs, func_args = None, num_outputs = int(1), n_cpu 
   return summary
 
 ###############################################################################
+#                       Captum: IntegratedGradient
+###############################################################################
+def apply_IntegratedGradient(model, inputs, func_args = None, num_outputs = int(1), n_cpu = int(1)):
+
+  import torch
+  import torch.nn as nn
+  import numpy as np
+  import time
+  from captum.attr import IntegratedGradients
+  
+  torch.set_num_threads(int(n_cpu))
+    
+  start_time = time.time()
+  inputs = torch.tensor(inputs, dtype = torch.float)
+  # for the baseline, we need only a single reference value
+  baseline = torch.tensor(func_args['x_ref'], dtype = torch.float)[0].unsqueeze(0)
+  
+  method = IntegratedGradients(model)
+  convert_time = time.time() - start_time
+
+  inp = inputs.clone()
+  inp.requires_grad = True
+  input_time = time.time()
+  result = list()
+
+  for out_class in range(int(num_outputs)):
+    attribution = method.attribute(inp, target = out_class, n_steps = int(func_args['n']), baselines = baseline, method = "riemann_right")
+    result.append(attribution)
+  
+  end_time = time.time()
+  
+  summary = {
+    "total_time": end_time - start_time,
+    "eval_time": end_time - input_time,
+    "convert_time": convert_time,
+    "result": torch.stack(result, dim = -1).detach().numpy()
+  }
+  
+  return summary
+
+###############################################################################
+#                       Captum: DeepLiftSHAP
+###############################################################################
+def apply_DeepSHAP(model, inputs, func_args = None, num_outputs = int(1), n_cpu = int(1)):
+
+  import torch
+  import torch.nn as nn
+  import numpy as np
+  import time
+  from captum.attr import DeepLiftShap
+  
+  torch.set_num_threads(int(n_cpu))
+    
+  start_time = time.time()
+  inputs = torch.tensor(inputs, dtype = torch.float)
+  baselines = torch.tensor(func_args['x_ref'], dtype = torch.float)
+  
+  method = DeepLiftShap(model)
+  convert_time = time.time() - start_time
+
+  inp = inputs.clone()
+  inp.requires_grad = True
+  input_time = time.time()
+  result = list()
+
+  for out_class in range(int(num_outputs)):
+    attribution = method.attribute(inp, target = out_class, baselines = baselines)
+    result.append(attribution)
+  
+  end_time = time.time()
+  
+  summary = {
+    "total_time": end_time - start_time,
+    "eval_time": end_time - input_time,
+    "convert_time": convert_time,
+    "result": torch.stack(result, dim = -1).detach().numpy()
+  }
+  
+  return summary
+
+###############################################################################
+#                       Captum: ExpectedGradient
+###############################################################################
+def apply_ExpectedGradient(model, inputs, func_args = None, num_outputs = int(1), n_cpu = int(1)):
+
+  import torch
+  import torch.nn as nn
+  import numpy as np
+  import time
+  from captum.attr import GradientShap
+  
+  torch.set_num_threads(int(n_cpu))
+    
+  start_time = time.time()
+  inputs = torch.tensor(inputs, dtype = torch.float)
+  baselines = torch.tensor(func_args['x_ref'], dtype = torch.float)
+  
+  method = GradientShap(model)
+  convert_time = time.time() - start_time
+  
+  inp = inputs.clone()
+  inp.requires_grad = True
+  input_time = time.time()
+  result = list()
+
+  for out_class in range(int(num_outputs)):
+    attribution = method.attribute(inp, target = out_class, baselines = baselines, n_samples = int(func_args['n']))
+    result.append(attribution)
+  
+  end_time = time.time()
+  
+  summary = {
+    "total_time": end_time - start_time,
+    "eval_time": end_time - input_time,
+    "convert_time": convert_time,
+    "result": torch.stack(result, dim = -1).detach().numpy()
+  }
+  
+  return summary
+
+
+###############################################################################
 #                       Captum: SmoothGrad
 ###############################################################################
 def apply_SmoothGrad(model, inputs, func_args = None, num_outputs = int(1), n_cpu = int(1)):
@@ -183,7 +305,8 @@ def apply_DeepLift(model, inputs, func_args = None, num_outputs = int(1), n_cpu 
   
   start_time = time.time()
   inputs = torch.tensor(inputs, dtype = torch.float)
-  func_args['x_ref'] = torch.tensor(func_args['x_ref'], dtype = torch.float)
+  # for the baseline, we need only a single reference value
+  baseline = torch.tensor(func_args['x_ref'], dtype = torch.float)[0].unsqueeze(0)
   dl = DeepLift(model, eps = 1e-6)
   convert_time = time.time() - start_time
 
@@ -193,7 +316,7 @@ def apply_DeepLift(model, inputs, func_args = None, num_outputs = int(1), n_cpu 
   result = list()
 
   for out_class in range(int(num_outputs)):
-    attribution = dl.attribute(inp, baselines = func_args['x_ref'], target=out_class)
+    attribution = dl.attribute(inp, baselines = baseline, target=out_class)
     result.append(attribution)
     
   end_time = time.time()

@@ -17,6 +17,7 @@ conda_install(envname = "JSS_innsight_tf_2",
 # Create conda environment for Captum and Zennit
 conda_create(envname = "JSS_innsight_pytorch", python_version = "3.8.12")
 conda_install(envname = "JSS_innsight_pytorch",
-              packages = c("torch==1.13.1", "captum==0.6.0", "zennit==0.5.0"),
+              packages = c("torch==1.13.1", "captum==0.6.0", "zennit==0.5.0",
+                           "shap==0.43.0"),
               pip_options = c("--extra-index-url https://download.pytorch.org/whl/cpu"),
               pip = TRUE)

@@ -45,6 +45,53 @@ def apply_Gradient(model, inputs, func_args = None, num_outputs = int(1), n_cpu 
   return summary
 
 ###############################################################################
+#                           zennit: IntegratedGradient
+###############################################################################
+def apply_IntegratedGradient(model, inputs, func_args = None, num_outputs = int(1), n_cpu = int(1)):
+  import torch
+  import torch.nn as nn
+  import numpy as np
+  import time
+  from zennit.attribution import IntegratedGradients
+  
+  start_time = time.time()
+  inputs = torch.tensor(inputs, dtype = torch.float)
+  x_ref = torch.tensor(func_args['x_ref'], dtype = torch.float)[0].unsqueeze(0)
+  convert_time = time.time() - start_time
+
+  inp = inputs.clone()
+  inp.requires_grad = True
+  input_time = time.time()
+  result = list()
+
+  for out_class in range(int(num_outputs)):
+    # Define attribution function for the output, i.e. only one neuron
+    def attr_fun(x):
+      ou = torch.zeros_like(x)
+      ou[:, out_class] = torch.ones_like(x[:, out_class])
+      return ou
+    
+    def base_fn(x):
+      return x_ref
+    
+    # Calculate the gradients
+    with IntegratedGradients(model, attr_output = attr_fun, baseline_fn = base_fn, n_iter = int(func_args['n'])) as attributor:
+      output, relevance = attributor(inp)
+    
+    result.append(relevance)
+  
+  end_time = time.time()
+    
+  summary = {
+    "total_time": end_time - start_time,
+    "eval_time": end_time - input_time,
+    "convert_time": convert_time,
+    "result": torch.stack(result, dim = -1).numpy()
+  }
+
+  return summary
+
+###############################################################################
 #                           zennit: SmoothGrad
 ###############################################################################
 

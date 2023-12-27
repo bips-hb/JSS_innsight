@@ -57,8 +57,8 @@ get_2D_model <- function(shape, act = "relu", bias = TRUE, pooling = "none",
       strides <- as.integer((shape[2:3] - 4) / 6)
       padding <- 0
     } else {
-      kernel_size <- c(3,3)
-      padding <- 1
+      kernel_size <- c(5,5)
+      padding <- 2
       strides <- c(1,1)
     }
     model$add_module(paste0("layer_", i), nn_conv2d(num_channels, width, bias = bias,

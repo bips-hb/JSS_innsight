@@ -5,7 +5,7 @@
 #                 - Create inputs
 ###############################################################################
 
-preprocess <- function(num_models, config, src_dir = "tmp") {
+preprocess <- function(num_models, num_refs, config, src_dir = "tmp") {
   library(callr)
   library(cli)
 
@@ -68,7 +68,7 @@ preprocess <- function(num_models, config, src_dir = "tmp") {
 
   # ------- Create inputs -----------------------------------------------------
   cli_progress_step("Creating inputs")
-  generate_inputs(model_config, src_dir)
+  generate_inputs(model_config, num_refs, src_dir)
 
 
   model_config
@@ -145,7 +145,7 @@ create_keras_models <- function(config, src_dir) {
 #                         Generate inputs
 ###############################################################################
 
-generate_inputs <- function(config, src_dir) {
+generate_inputs <- function(config, num_refs, src_dir) {
   set.seed(42)
   if (!dir.exists(paste0(src_dir, "/inputs"))) {
     dir.create(paste0(src_dir, "/inputs"), recursive = TRUE)
@@ -155,14 +155,14 @@ generate_inputs <- function(config, src_dir) {
     # channels last
     inputs <- array(rnorm(prod(shape)), dim = shape)
     saveRDS(inputs, paste0(src_dir, "/inputs/input_", paste(shape, collapse = "_"), "_last.rds"))
-    inputs_ref <- array(rnorm(prod(shape)), dim = c(1, shape[-1]))
+    inputs_ref <- array(rnorm(prod(shape[-1]) * num_refs), dim = c(num_refs, shape[-1]))
     saveRDS(inputs_ref, paste0(src_dir, "/inputs/input_ref_", paste(shape, collapse = "_"), "_last.rds"))
 
     # channels first
     shape <- append(shape[-length(shape)], shape[length(shape)], after = 1)
     inputs <- array(rnorm(prod(shape)), dim = shape)
     saveRDS(inputs, paste0(src_dir, "/inputs/input_", paste(shape, collapse = "_"), "_first.rds"))
-    inputs_ref <- array(rnorm(prod(shape)), dim = c(1, shape[-1]))
+    inputs_ref <- array(rnorm(prod(shape[-1]) * num_refs), dim = c(num_refs, shape[-1]))
     saveRDS(inputs_ref, paste0(src_dir, "/inputs/input_ref_", paste(shape, collapse = "_"), "_first.rds"))
   }
 }
